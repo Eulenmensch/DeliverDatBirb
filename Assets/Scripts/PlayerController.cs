@@ -7,7 +7,7 @@ public class PlayerController : MonoBehaviour
 {
     public float Speed;
     public float GravitationalAcceleration = 9.81f;
-    public bool IsIsometric;
+    public bool IsIsometric; //FIXME: This needs to be refactored out once it is certain which camera projection we are using
     public GameObject GroundCheckSphere;
     public float GroundCheckRadius;
     public LayerMask GroundLayerMask;
@@ -34,7 +34,7 @@ public class PlayerController : MonoBehaviour
         ApplyGravity();
         Rotate();
     }
-    public void Move()
+    private void Move()
     {
         CharacterDir = transform.right * MoveDir.x + transform.forward * MoveDir.y;
         if (IsIsometric)
@@ -43,6 +43,10 @@ public class PlayerController : MonoBehaviour
         }
         CharacterDir *= Time.deltaTime;
         CharacterController.Move(CharacterDir * Speed);
+    }
+
+    void Jump(){
+
     }
 
     void ApplyGravity()
