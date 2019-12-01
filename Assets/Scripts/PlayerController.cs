@@ -47,7 +47,6 @@ public class PlayerController : MonoBehaviour
 
     void ApplyGravity()
     {
-        print(IsGrounded());
         if (IsGrounded() && VelocityGravitational.y < 0)
         {
             VelocityGravitational.y = 0;
