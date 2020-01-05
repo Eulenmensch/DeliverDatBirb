@@ -6,21 +6,17 @@ using UnityEngine.InputSystem;
 public class PlayerControllerNew : MonoBehaviour
 {
     public float Speed;
-    
+
     float HorizontalInput;
     float VerticalInput;
 
-    void Start()
-    {
-        
-    }
-
-    void Update()
+    void FixedUpdate()
     {
         HandleMoveInput();
     }
 
-    void HandleMoveInput(){
+    void HandleMoveInput()
+    {
         Vector3 newPosition = transform.position;
         newPosition.x += HorizontalInput * Time.deltaTime * Speed;
         newPosition.z += VerticalInput * Time.deltaTime * Speed;

@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     public float Speed;
+    public float JumpHeight;
     public float GravitationalAcceleration = 9.81f;
     public bool IsIsometric; //FIXME: This needs to be refactored out once it is certain which camera projection we are using
     public GameObject GroundCheckSphere;
@@ -17,6 +18,7 @@ public class PlayerController : MonoBehaviour
     private Vector2 MoveDir;
     private Vector3 CharacterDir;
     private Vector3 VelocityGravitational;
+    private bool IsReceivingJumpInput;
 
     private void Awake()
     {
@@ -26,13 +28,17 @@ public class PlayerController : MonoBehaviour
 
         Controls.Player.Move.performed += context => MoveDir = context.ReadValue<Vector2>();
         Controls.Player.Move.canceled += context => MoveDir = Vector2.zero;
+        Controls.Player.Jump.performed += context => IsReceivingJumpInput = true;
+        Controls.Player.Jump.canceled += context => IsReceivingJumpInput = false;
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         Move();
-        ApplyGravity();
-        Rotate();
+        // ApplyGravity();
+        Jump();
+        // Rotate();
+        CharacterController.Move(CharacterDir);
     }
     private void Move()
     {
@@ -42,11 +48,16 @@ public class PlayerController : MonoBehaviour
             CharacterDir = Quaternion.AngleAxis(45, Vector3.up) * CharacterDir;
         }
         CharacterDir *= Time.deltaTime;
-        CharacterController.Move(CharacterDir * Speed);
+        CharacterDir *= Speed;
     }
 
-    void Jump(){
-
+    void Jump()
+    {
+        if (IsReceivingJumpInput && IsGrounded())
+        {
+            CharacterDir.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
+            print(Mathf.Sqrt(JumpHeight * 2f * GravitationalAcceleration));
+        }
     }
 
     void ApplyGravity()
