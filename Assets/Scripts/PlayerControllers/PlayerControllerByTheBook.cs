@@ -19,13 +19,17 @@ public class PlayerControllerByTheBook : MonoBehaviour
 
     void Update()
     {
+        Vector3 inputVector = new Vector3(Input.GetAxis("Horizontal"), moveDirection.y, Input.GetAxis("Vertical"));
+        moveDirection = Quaternion.Euler(0, 45, 0) * inputVector;
+        moveDirection = moveDirection.normalized;
+        moveDirection *= speed;
+
         if (characterController.isGrounded)
         {
             // We are grounded, so recalculate
             // move direction directly from axes
 
-            moveDirection = new Vector3(Input.GetAxis("Horizontal"), 0.0f, Input.GetAxis("Vertical"));
-            moveDirection *= speed;
+
 
             if (Input.GetButton("Jump"))
             {

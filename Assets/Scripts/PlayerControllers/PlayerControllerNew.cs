@@ -16,7 +16,7 @@ public class PlayerControllerNew : MonoBehaviour
     private bool IsReceivingJumpInput;
 
     private Vector3 MoveDirection;
-    private bool IsJumping;
+    private Vector3 VelocityGravitational;
 
     private void Start()
     {
@@ -39,16 +39,9 @@ public class PlayerControllerNew : MonoBehaviour
 
     void HandleJumpInput()
     {
-        if (IsJumping && CharacterControllerRef.isGrounded)
-        {
-            IsJumping = false;
-            IsReceivingJumpInput = false;
-        }
         if (IsReceivingJumpInput)
         {
             MoveDirection.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
-            // MoveDirection.y = JumpHeight;
-            IsJumping = true;
         }
     }
 
@@ -79,11 +72,8 @@ public class PlayerControllerNew : MonoBehaviour
             if (context.phase == InputActionPhase.Performed)
             {
                 IsReceivingJumpInput = true;
+                print(IsReceivingJumpInput);
             }
-        }
-        else
-        {
-            IsReceivingJumpInput = false;
         }
     }
 }
