@@ -13,10 +13,10 @@ public class PlayerControllerNew : MonoBehaviour
 
     private float HorizontalInput;
     private float VerticalInput;
-    private bool IsReceivingJumpInput; //TODO look at this value during debug
+    private bool IsReceivingJumpInput;
 
     private Vector3 MoveDirection;
-    private Vector3 VelocityGravitational; //TODO look at this value during debug
+    private Vector3 VelocityGravitational;
 
     private bool IsJumping;
 
@@ -27,14 +27,14 @@ public class PlayerControllerNew : MonoBehaviour
 
     void FixedUpdate()
     {
-        HandleMoveInput();
-        ApplyGravity(); // maybe this call needs to be earlier in the execution order?
+        ApplyMoveInput();
         HandleJumpInput();
+        ApplyGravity();
         Debug.DrawRay(transform.position, MoveDirection, Color.magenta); //TODO Remove this after debugging
         CharacterControllerRef.Move(MoveDirection * Time.deltaTime);
     }
 
-    void HandleMoveInput()
+    void ApplyMoveInput()
     {
         MoveDirection = new Vector3(HorizontalInput, 0.0f, VerticalInput);
         MoveDirection = MoveDirection.normalized;
@@ -49,19 +49,27 @@ public class PlayerControllerNew : MonoBehaviour
         }
     }
 
+    void ApplyJumpInput()
+    {
+        if (IsReceivingJumpInput && !IsJumping)
+        {
+            //do jumpy stuff
+            IsJumping = true;
+        }
+
+    }
+
     void ApplyGravity()
     {
         if (CharacterControllerRef.isGrounded && VelocityGravitational.y <= 0.0f)
         {
             VelocityGravitational.y = 0.0f;
-            print("grounded");
         }
         else
         {
             VelocityGravitational.y -= GravitationalAcceleration * Time.deltaTime;
         }
-        MoveDirection.y = VelocityGravitational.y;
-        print(MoveDirection.y);
+        MoveDirection.y += VelocityGravitational.y;
     }
 
     public void GetMoveInput(InputAction.CallbackContext context)
@@ -77,26 +85,13 @@ public class PlayerControllerNew : MonoBehaviour
 
     public void GetJumpInput(InputAction.CallbackContext context)
     {
-        if (context.performed && !IsJumping)
+        if (context.performed && !IsReceivingJumpInput)
         {
-            IsJumping = true;
             IsReceivingJumpInput = true;
         }
-        else if (context.performed && IsJumping)
+        else if (context.performed && IsReceivingJumpInput)
         {
             IsReceivingJumpInput = false;
-            IsJumping = false;
         }
     }
-    // public void GetJumpInput(InputAction.CallbackContext context) //FIXME Needs a proper rework so that the bool can also be false. Look at a getbuttondown example for the new input system
-    // {
-    //     if (CharacterControllerRef.isGrounded)
-    //     {
-    //         if (context.phase == InputActionPhase.Performed)
-    //         {
-    //             IsReceivingJumpInput = true;
-    //             print(IsReceivingJumpInput);
-    //         }
-    //     }
-    // }
 }
