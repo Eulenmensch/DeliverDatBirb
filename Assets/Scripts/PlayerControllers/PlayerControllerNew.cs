@@ -9,7 +9,10 @@ public class PlayerControllerNew : MonoBehaviour
 
     public float Speed;
     public float JumpHeight;
+    public float GravityMultiplayer;
     public float GravitationalAcceleration;
+    public float FallModifier;
+    public float ShortJumpModifier;
 
     private float HorizontalInput;
     private float VerticalInput;
@@ -29,6 +32,7 @@ public class PlayerControllerNew : MonoBehaviour
     {
         ApplyMoveInput();
         HandleJumpInput();
+        ApplyJumpInput();
         ApplyGravity();
         Debug.DrawRay(transform.position, MoveDirection, Color.magenta); //TODO Remove this after debugging
         CharacterControllerRef.Move(MoveDirection * Time.deltaTime);
@@ -43,31 +47,42 @@ public class PlayerControllerNew : MonoBehaviour
 
     void HandleJumpInput()
     {
-        if (IsReceivingJumpInput) // This should probably be an IsJumping Bool that is true as long as the character is in the air
+        if (IsReceivingJumpInput && !IsJumping)
         {
-            MoveDirection.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
+            IsJumping = true;
+        }
+        if (CharacterControllerRef.isGrounded && IsJumping)
+        {
+            IsJumping = false;
         }
     }
 
     void ApplyJumpInput()
     {
-        if (IsReceivingJumpInput && !IsJumping)
+        if (IsJumping) // This should probably be an IsJumping Bool that is true as long as the character is in the air
         {
-            //do jumpy stuff
-            IsJumping = true;
+            MoveDirection.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
         }
-
     }
 
     void ApplyGravity()
     {
+        float currentVelocityY = MoveDirection.y + VelocityGravitational.y;
         if (CharacterControllerRef.isGrounded && VelocityGravitational.y <= 0.0f)
         {
             VelocityGravitational.y = 0.0f;
         }
+        else if (IsJumping && !IsReceivingJumpInput && currentVelocityY >= 0) // make the jump shorter if the jump button was released before reaching the apex
+        {
+            VelocityGravitational.y -= GravitationalAcceleration * ShortJumpModifier * Time.deltaTime;
+        }
+        else if (IsJumping && currentVelocityY < 0) // make the decent faster than the ascend
+        {
+            VelocityGravitational.y -= GravitationalAcceleration * FallModifier * Time.deltaTime;
+        }
         else
         {
-            VelocityGravitational.y -= GravitationalAcceleration * Time.deltaTime;
+            VelocityGravitational.y -= GravitationalAcceleration * GravityMultiplayer * Time.deltaTime;
         }
         MoveDirection.y += VelocityGravitational.y;
     }
