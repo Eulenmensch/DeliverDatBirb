@@ -8,8 +8,8 @@ public class PlayerControllerNew : MonoBehaviour
     private CharacterController CharacterControllerRef;
 
     public float Speed;
+    public float AirControlFactor;
     public float JumpHeight;
-    public float GravityMultiplayer;
     public float GravitationalAcceleration;
     public float FallModifier;
     public float ShortJumpModifier;
@@ -40,9 +40,20 @@ public class PlayerControllerNew : MonoBehaviour
 
     void ApplyMoveInput()
     {
-        MoveDirection = new Vector3(HorizontalInput, 0.0f, VerticalInput);
-        MoveDirection = MoveDirection.normalized;
-        MoveDirection *= Speed;
+        Vector3 inputVector = new Vector3(HorizontalInput, 0.0f, VerticalInput);
+        if (CharacterControllerRef.isGrounded) // Grounded Movement
+        {
+            MoveDirection = inputVector;
+            MoveDirection = MoveDirection.normalized;
+            MoveDirection *= Speed;
+        }
+        else if (!CharacterControllerRef.isGrounded) // Aerial Movement
+        {
+            float DirectionInputAngle = Mathf.Abs(Vector3.SignedAngle(MoveDirection, inputVector, Vector3.up)); // calculate angle between input and current direction
+            MoveDirection += inputVector; // gives aircontrol dependent on AirModifier
+            MoveDirection = MoveDirection.normalized;
+            MoveDirection *= Speed;
+        }
     }
 
     void HandleJumpInput()
@@ -68,7 +79,7 @@ public class PlayerControllerNew : MonoBehaviour
     void ApplyGravity()
     {
         float currentVelocityY = MoveDirection.y + VelocityGravitational.y;
-        if (CharacterControllerRef.isGrounded && VelocityGravitational.y <= 0.0f)
+        if (CharacterControllerRef.isGrounded && VelocityGravitational.y <= 0.0f) // reset gravitational velocity to 0 if grounded
         {
             VelocityGravitational.y = 0.0f;
         }
@@ -76,13 +87,13 @@ public class PlayerControllerNew : MonoBehaviour
         {
             VelocityGravitational.y -= GravitationalAcceleration * ShortJumpModifier * Time.deltaTime;
         }
-        else if (IsJumping && currentVelocityY < 0) // make the decent faster than the ascend
+        else if (IsJumping && currentVelocityY < 0) // make the descent faster than the ascend
         {
             VelocityGravitational.y -= GravitationalAcceleration * FallModifier * Time.deltaTime;
         }
-        else
+        else // if nothing else, apply normal gravity
         {
-            VelocityGravitational.y -= GravitationalAcceleration * GravityMultiplayer * Time.deltaTime;
+            VelocityGravitational.y -= GravitationalAcceleration * Time.deltaTime;
         }
         MoveDirection.y += VelocityGravitational.y;
     }

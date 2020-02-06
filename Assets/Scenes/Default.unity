@@ -128,7 +128,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh19014
+  m_Name: pb_Mesh18990
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -3317,8 +3317,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Speed: 1
+  AirControlFactor: 0
   JumpHeight: 1
-  GravityMultiplayer: 1
   GravitationalAcceleration: 9.81
   FallModifier: 1
   ShortJumpModifier: 1
@@ -3526,12 +3526,6 @@ MonoBehaviour:
     Range: 20
     Input:
       Type: 1
-      Number: 2
-  - Component: PlayerControllerNew
-    Member: GravityMultiplayer
-    Range: 4
-    Input:
-      Type: 0
       Number: 2
   - Component: PlayerControllerNew
     Member: FallModifier
