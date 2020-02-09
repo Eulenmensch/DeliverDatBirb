@@ -7,6 +7,11 @@ public class PlayerControllerNew : MonoBehaviour
 {
     private CharacterController CharacterControllerRef;
 
+    public GameObject Camera;
+    public GameObject GroundCheckSphere;
+    public float GroundCheckRadius;
+    public LayerMask GroundLayerMask;
+
     public float Speed;
     public float AirControlFactor;
     public float JumpHeight;
@@ -41,18 +46,17 @@ public class PlayerControllerNew : MonoBehaviour
     void ApplyMoveInput()
     {
         Vector3 inputVector = new Vector3(HorizontalInput, 0.0f, VerticalInput);
-        if (CharacterControllerRef.isGrounded) // Grounded Movement
+        if (IsGrounded()) // Grounded Movement
         {
             MoveDirection = inputVector;
             MoveDirection = MoveDirection.normalized;
             MoveDirection *= Speed;
         }
-        else if (!CharacterControllerRef.isGrounded) // Aerial Movement
+        else if (!IsGrounded()) // Aerial Movement
         {
-            float DirectionInputAngle = Mathf.Abs(Vector3.SignedAngle(MoveDirection, inputVector, Vector3.up)); // calculate angle between input and current direction
-            MoveDirection += inputVector; // gives aircontrol dependent on AirModifier
-            MoveDirection = MoveDirection.normalized;
-            MoveDirection *= Speed;
+            MoveDirection = new Vector3(MoveDirection.x, 0f, MoveDirection.z); // reset the move vector to ground plane
+            MoveDirection += inputVector * AirControlFactor; // gives aircontrol dependent on AirControlFactor
+            MoveDirection = Vector3.ClampMagnitude(MoveDirection, Speed); // limits the movedirection's speed to the defined movespeed
         }
     }
 
@@ -62,7 +66,7 @@ public class PlayerControllerNew : MonoBehaviour
         {
             IsJumping = true;
         }
-        if (CharacterControllerRef.isGrounded && IsJumping)
+        else if (IsGrounded() && IsJumping)
         {
             IsJumping = false;
         }
@@ -98,12 +102,18 @@ public class PlayerControllerNew : MonoBehaviour
         MoveDirection.y += VelocityGravitational.y;
     }
 
+    bool IsGrounded()
+    {
+        return Physics.CheckSphere(GroundCheckSphere.transform.position, GroundCheckRadius, GroundLayerMask);
+    }
+
     public void GetMoveInput(InputAction.CallbackContext context)
     {
+        float cameraAngle = (Camera.transform.rotation.eulerAngles.y) * Mathf.Deg2Rad;
         Vector2 inputVector = context.ReadValue<Vector2>();
         Vector2 rotatedInputVector = new Vector2(
-            inputVector.x * Mathf.Cos(-0.7854f) - inputVector.y * Mathf.Sin(-0.7854f),
-            inputVector.x * Mathf.Sin(-0.7854f) + inputVector.y * Mathf.Cos(-0.7854f)
+            inputVector.x * Mathf.Cos(-cameraAngle) - inputVector.y * Mathf.Sin(-cameraAngle),
+            inputVector.x * Mathf.Sin(-cameraAngle) + inputVector.y * Mathf.Cos(-cameraAngle)
         );
         HorizontalInput = rotatedInputVector.x;
         VerticalInput = rotatedInputVector.y;
