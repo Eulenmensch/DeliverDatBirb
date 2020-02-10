@@ -22,6 +22,7 @@ public class PlayerControllerNew : MonoBehaviour
     private float HorizontalInput;
     private float VerticalInput;
     private bool IsReceivingJumpInput;
+    private bool HasStoppedReceivingJumpInput;
 
     private Vector3 MoveDirection;
     private Vector3 VelocityGravitational;
@@ -31,6 +32,7 @@ public class PlayerControllerNew : MonoBehaviour
     private void Start()
     {
         CharacterControllerRef = GetComponent<CharacterController>();
+        HasStoppedReceivingJumpInput = true; // set the start value to true to start to not eat the first jump input
     }
 
     void FixedUpdate()
@@ -62,13 +64,17 @@ public class PlayerControllerNew : MonoBehaviour
 
     void HandleJumpInput()
     {
-        if (IsReceivingJumpInput && !IsJumping)
+        if (IsGrounded())
         {
-            IsJumping = true;
-        }
-        else if (IsGrounded() && IsJumping)
-        {
-            IsJumping = false;
+            if (IsReceivingJumpInput && !IsJumping && HasStoppedReceivingJumpInput)
+            {
+                HasStoppedReceivingJumpInput = false;
+                IsJumping = true;
+            }
+            else if (IsJumping) // else if so that if you get jumpinput you don't set it back to false on the same frame
+            {
+                IsJumping = false;
+            }
         }
     }
 
@@ -128,6 +134,7 @@ public class PlayerControllerNew : MonoBehaviour
         else if (context.performed && IsReceivingJumpInput)
         {
             IsReceivingJumpInput = false;
+            HasStoppedReceivingJumpInput = true;
         }
     }
 }
