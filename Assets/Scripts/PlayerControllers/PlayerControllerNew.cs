@@ -8,7 +8,7 @@ public class PlayerControllerNew : MonoBehaviour
     private CharacterController CharacterControllerRef;
 
     public GameObject Camera;
-    public GameObject GroundCheckSphere;
+    public Transform GroundCheckSphere;
     public float GroundCheckRadius;
     public LayerMask GroundLayerMask;
 
@@ -33,6 +33,7 @@ public class PlayerControllerNew : MonoBehaviour
     {
         CharacterControllerRef = GetComponent<CharacterController>();
         HasStoppedReceivingJumpInput = true; // set the start value to true to start to not eat the first jump input
+        IsReceivingJumpInput = false;
     }
 
     void FixedUpdate()
@@ -51,7 +52,7 @@ public class PlayerControllerNew : MonoBehaviour
         if (IsGrounded()) // Grounded Movement
         {
             MoveDirection = inputVector;
-            MoveDirection = MoveDirection.normalized;
+            MoveDirection = Vector3.ClampMagnitude(MoveDirection, 1);
             MoveDirection *= Speed;
         }
         else if (!IsGrounded()) // Aerial Movement
@@ -110,7 +111,7 @@ public class PlayerControllerNew : MonoBehaviour
 
     bool IsGrounded()
     {
-        return Physics.CheckSphere(GroundCheckSphere.transform.position, GroundCheckRadius, GroundLayerMask);
+        return Physics.CheckSphere(GroundCheckSphere.position, GroundCheckRadius, GroundLayerMask);
     }
 
     public void GetMoveInput(InputAction.CallbackContext context)
