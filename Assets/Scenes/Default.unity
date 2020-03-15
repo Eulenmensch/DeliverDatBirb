@@ -45973,7 +45973,7 @@ MonoBehaviour:
   AirControlFactor: 0.5
   GravitationalAcceleration: 18
   JumpHeight: 3
-  FlapHeight: 2
+  FlapHeight: 1.46
   FallModifier: 2.5
   ShortJumpModifier: 2
 --- !u!23 &1565332945

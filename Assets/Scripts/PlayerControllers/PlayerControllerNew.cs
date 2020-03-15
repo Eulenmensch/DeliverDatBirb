@@ -169,7 +169,7 @@ public class PlayerControllerNew : MonoBehaviour
 
     public void GetFlapInput(InputAction.CallbackContext context)
     {
-        if (context.started)
+        if (context.started && (IsJumping || IsFlapping))
         {
             IsReceivingFlapInput = true;
         }
