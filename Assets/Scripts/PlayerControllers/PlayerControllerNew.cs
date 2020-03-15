@@ -24,6 +24,7 @@ public class PlayerControllerNew : MonoBehaviour
     private float VerticalInput;
     private bool IsReceivingJumpInput;
     private bool HasStoppedReceivingJumpInput;
+    private bool IsReceivingFlapInput;
 
     private Vector3 MoveDirection;
     private Vector3 VelocityGravitational;
@@ -93,10 +94,11 @@ public class PlayerControllerNew : MonoBehaviour
 
     void HandleFlapInput()
     {
-        if (IsReceivingJumpInput && !IsGrounded() && HasStoppedReceivingJumpInput)
+        if (IsReceivingFlapInput && !IsGrounded())
         {
             IsFlapping = true;
             VelocityGravitational.y = 0.0f;
+            IsReceivingFlapInput = false;
         }
         else if (IsGrounded())
         {
@@ -162,6 +164,14 @@ public class PlayerControllerNew : MonoBehaviour
         {
             IsReceivingJumpInput = false;
             HasStoppedReceivingJumpInput = true;
+        }
+    }
+
+    public void GetFlapInput(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            IsReceivingFlapInput = true;
         }
     }
 }

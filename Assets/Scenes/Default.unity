@@ -46127,6 +46127,21 @@ MonoBehaviour:
       m_Calls: []
     m_ActionId: d3547737-905e-415a-87b8-e786d9eaa92d
     m_ActionName: UI/TrackedDeviceSelect
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1565332944}
+        m_MethodName: GetFlapInput
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: 309970b7-f27d-4a89-87e9-4e743e6934ea
+    m_ActionName: Player/Flap[/Keyboard/space]
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player
