@@ -14,8 +14,9 @@ public class PlayerControllerNew : MonoBehaviour
 
     public float Speed;
     public float AirControlFactor;
-    public float JumpHeight;
     public float GravitationalAcceleration;
+    public float JumpHeight;
+    public float FlapHeight;
     public float FallModifier;
     public float ShortJumpModifier;
 
@@ -28,6 +29,7 @@ public class PlayerControllerNew : MonoBehaviour
     private Vector3 VelocityGravitational;
 
     private bool IsJumping;
+    private bool IsFlapping;
 
     private void Start()
     {
@@ -41,6 +43,8 @@ public class PlayerControllerNew : MonoBehaviour
         ApplyMoveInput();
         HandleJumpInput();
         ApplyJumpInput();
+        HandleFlapInput();
+        ApplyFlapInput();
         ApplyGravity();
         Debug.DrawRay(transform.position, MoveDirection, Color.magenta); //TODO Remove this after debugging
         CharacterControllerRef.Move(MoveDirection * Time.deltaTime);
@@ -81,13 +85,35 @@ public class PlayerControllerNew : MonoBehaviour
 
     void ApplyJumpInput()
     {
-        if (IsJumping) // This should probably be an IsJumping Bool that is true as long as the character is in the air
+        if (IsJumping)
         {
             MoveDirection.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
         }
     }
 
-    void ApplyGravity()
+    void HandleFlapInput()
+    {
+        if (IsReceivingJumpInput && !IsGrounded() && HasStoppedReceivingJumpInput)
+        {
+            IsFlapping = true;
+            VelocityGravitational.y = 0.0f;
+        }
+        else if (IsGrounded())
+        {
+            IsFlapping = false;
+        }
+    }
+
+    void ApplyFlapInput()
+    {
+        if (IsFlapping)
+        {
+            IsJumping = false;
+            MoveDirection.y = Mathf.Sqrt(FlapHeight * -2f * -GravitationalAcceleration);
+        }
+    }
+
+    void ApplyGravity() //TODO Flapping also needs modifiable falling values. Either make a function that checks is airborne (jumping or flapping) or make more else ifs for flapping specifically.
     {
         float currentVelocityY = MoveDirection.y + VelocityGravitational.y;
         if (CharacterControllerRef.isGrounded && VelocityGravitational.y <= 0.0f) // reset gravitational velocity to 0 if grounded

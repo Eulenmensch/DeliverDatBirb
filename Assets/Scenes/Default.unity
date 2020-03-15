@@ -45971,8 +45971,9 @@ MonoBehaviour:
     m_Bits: 512
   Speed: 7
   AirControlFactor: 0.5
-  JumpHeight: 3
   GravitationalAcceleration: 18
+  JumpHeight: 3
+  FlapHeight: 2
   FallModifier: 2.5
   ShortJumpModifier: 2
 --- !u!23 &1565332945
