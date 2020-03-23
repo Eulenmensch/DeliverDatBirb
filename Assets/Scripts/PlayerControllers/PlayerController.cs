@@ -5,90 +5,173 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    public float Speed;
-    public float JumpHeight;
-    public float GravitationalAcceleration = 9.81f;
-    public bool IsIsometric; //FIXME: This needs to be refactored out once it is certain which camera projection we are using
-    public GameObject GroundCheckSphere;
+    private CharacterController CharacterControllerRef;
+
+    public GameObject Camera;
+    public Transform GroundCheckSphere;
     public float GroundCheckRadius;
     public LayerMask GroundLayerMask;
 
-    private CharacterController CharacterController;
-    private InputMaster Controls;
-    private Vector2 MoveDir;
-    private Vector3 CharacterDir;
-    private Vector3 VelocityGravitational;
+    public float Speed;
+    public float AirControlFactor;
+    public float GravitationalAcceleration;
+    public float JumpHeight;
+    public float FlapHeight;
+    public float FallModifier;
+    public float ShortJumpModifier;
+
+    private float HorizontalInput;
+    private float VerticalInput;
     private bool IsReceivingJumpInput;
+    private bool HasStoppedReceivingJumpInput;
+    private bool IsReceivingFlapInput;
 
-    private void Awake()
+    private Vector3 MoveDirection;
+    private Vector3 VelocityGravitational;
+
+    private bool IsJumping;
+    private bool IsFlapping;
+
+    private void Start()
     {
-        CharacterController = GetComponent<CharacterController>();
-
-        Controls = new InputMaster();
-
-        Controls.Player.Move.performed += context => MoveDir = context.ReadValue<Vector2>();
-        Controls.Player.Move.canceled += context => MoveDir = Vector2.zero;
-        Controls.Player.Jump.performed += context => IsReceivingJumpInput = true;
-        Controls.Player.Jump.canceled += context => IsReceivingJumpInput = false;
+        CharacterControllerRef = GetComponent<CharacterController>();
+        HasStoppedReceivingJumpInput = true; // set the start value to true to start to not eat the first jump input
+        IsReceivingJumpInput = false;
     }
 
-    private void FixedUpdate()
+    void FixedUpdate()
     {
-        Move();
-        // ApplyGravity();
-        Jump();
-        // Rotate();
-        CharacterController.Move(CharacterDir);
+        ApplyMoveInput();
+        HandleJumpInput();
+        ApplyJumpInput();
+        HandleFlapInput();
+        ApplyFlapInput();
+        ApplyGravity();
+        Debug.DrawRay(transform.position, MoveDirection, Color.magenta); //TODO Remove this after debugging
+        CharacterControllerRef.Move(MoveDirection * Time.deltaTime);
     }
-    private void Move()
+
+    void ApplyMoveInput()
     {
-        CharacterDir = transform.right * MoveDir.x + transform.forward * MoveDir.y;
-        if (IsIsometric)
+        Vector3 inputVector = new Vector3(HorizontalInput, 0.0f, VerticalInput);
+        if (IsGrounded()) // Grounded Movement
         {
-            CharacterDir = Quaternion.AngleAxis(45, Vector3.up) * CharacterDir;
+            MoveDirection = inputVector;
+            MoveDirection = Vector3.ClampMagnitude(MoveDirection, 1);
+            MoveDirection *= Speed;
         }
-        CharacterDir *= Time.deltaTime;
-        CharacterDir *= Speed;
-    }
-
-    void Jump()
-    {
-        if (IsReceivingJumpInput && IsGrounded())
+        else if (!IsGrounded()) // Aerial Movement
         {
-            CharacterDir.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
-            print(Mathf.Sqrt(JumpHeight * 2f * GravitationalAcceleration));
+            MoveDirection = new Vector3(MoveDirection.x, 0f, MoveDirection.z); // reset the move vector to ground plane
+            MoveDirection += inputVector * AirControlFactor; // gives aircontrol dependent on AirControlFactor
+            MoveDirection = Vector3.ClampMagnitude(MoveDirection, Speed); // limits the movedirection's speed to the defined movespeed
         }
     }
 
-    void ApplyGravity()
+    void HandleJumpInput()
     {
-        if (IsGrounded() && VelocityGravitational.y < 0)
+        if (IsGrounded())
         {
-            VelocityGravitational.y = 0;
+            if (IsReceivingJumpInput && !IsJumping && HasStoppedReceivingJumpInput)
+            {
+                HasStoppedReceivingJumpInput = false;
+                IsJumping = true;
+            }
+            else if (IsJumping) // else if so that if you get jumpinput you don't set it back to false on the same frame
+            {
+                IsJumping = false;
+            }
         }
-        VelocityGravitational.y -= GravitationalAcceleration * Mathf.Pow(Time.deltaTime, 2);
-        CharacterController.Move(VelocityGravitational);
+    }
+
+    void ApplyJumpInput()
+    {
+        if (IsJumping)
+        {
+            MoveDirection.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
+        }
+    }
+
+    void HandleFlapInput()
+    {
+        if (IsReceivingFlapInput && !IsGrounded())
+        {
+            IsFlapping = true;
+            VelocityGravitational.y = 0.0f;
+            IsReceivingFlapInput = false;
+        }
+        else if (IsGrounded())
+        {
+            IsFlapping = false;
+        }
+    }
+
+    void ApplyFlapInput()
+    {
+        if (IsFlapping)
+        {
+            IsJumping = false;
+            MoveDirection.y = Mathf.Sqrt(FlapHeight * -2f * -GravitationalAcceleration);
+        }
+    }
+
+    void ApplyGravity() //TODO Flapping also needs modifiable falling values. Either make a function that checks is airborne (jumping or flapping) or make more else ifs for flapping specifically.
+    {
+        float currentVelocityY = MoveDirection.y + VelocityGravitational.y;
+        if (CharacterControllerRef.isGrounded && VelocityGravitational.y <= 0.0f) // reset gravitational velocity to 0 if grounded
+        {
+            VelocityGravitational.y = 0.0f;
+        }
+        else if (IsJumping && !IsReceivingJumpInput && currentVelocityY >= 0) // make the jump shorter if the jump button was released before reaching the apex
+        {
+            VelocityGravitational.y -= GravitationalAcceleration * ShortJumpModifier * Time.deltaTime;
+        }
+        else if (!IsGrounded() && currentVelocityY < 0) // make the descent faster than the ascend
+        {
+            VelocityGravitational.y -= GravitationalAcceleration * FallModifier * Time.deltaTime;
+        }
+        else // if nothing else, apply normal gravity
+        {
+            VelocityGravitational.y -= GravitationalAcceleration * Time.deltaTime;
+        }
+        MoveDirection.y += VelocityGravitational.y;
     }
 
     bool IsGrounded()
     {
-        return Physics.CheckSphere(GroundCheckSphere.transform.position, GroundCheckRadius, GroundLayerMask);
+        return Physics.CheckSphere(GroundCheckSphere.position, GroundCheckRadius, GroundLayerMask);
     }
 
-    void Rotate()
+    public void GetMoveInput(InputAction.CallbackContext context)
     {
-        if (!IsIsometric)
+        float cameraAngle = (Camera.transform.rotation.eulerAngles.y) * Mathf.Deg2Rad;
+        Vector2 inputVector = context.ReadValue<Vector2>();
+        Vector2 rotatedInputVector = new Vector2(
+            inputVector.x * Mathf.Cos(-cameraAngle) - inputVector.y * Mathf.Sin(-cameraAngle),
+            inputVector.x * Mathf.Sin(-cameraAngle) + inputVector.y * Mathf.Cos(-cameraAngle)
+        );
+        HorizontalInput = rotatedInputVector.x;
+        VerticalInput = rotatedInputVector.y;
+    }
+
+    public void GetJumpInput(InputAction.CallbackContext context)
+    {
+        if (context.performed && !IsReceivingJumpInput)
         {
-            transform.rotation = Camera.main.transform.rotation;
+            IsReceivingJumpInput = true;
+        }
+        else if (context.performed && IsReceivingJumpInput)
+        {
+            IsReceivingJumpInput = false;
+            HasStoppedReceivingJumpInput = true;
         }
     }
 
-    private void OnEnable()
+    public void GetFlapInput(InputAction.CallbackContext context)
     {
-        Controls.Player.Enable();
-    }
-    private void OnDisable()
-    {
-        Controls.Player.Disable();
+        if (context.started && !IsGrounded())
+        {
+            IsReceivingFlapInput = true;
+        }
     }
 }
