@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour
     public float FlapHeight;
     public float FallModifier;
     public float ShortJumpModifier;
+    public float GlideModifier;
 
     private float HorizontalInput;
     private float VerticalInput;
@@ -125,6 +126,10 @@ public class PlayerController : MonoBehaviour
         else if (IsJumping && !IsReceivingJumpInput && currentVelocityY >= 0) // make the jump shorter if the jump button was released before reaching the apex
         {
             VelocityGravitational.y -= GravitationalAcceleration * ShortJumpModifier * Time.deltaTime;
+        }
+        else if (!IsGrounded() && IsReceivingJumpInput && currentVelocityY < 0) // make the descent slower if the jump button is being held
+        {
+            VelocityGravitational.y -= GravitationalAcceleration * GlideModifier * Time.deltaTime;
         }
         else if (!IsGrounded() && currentVelocityY < 0) // make the descent faster than the ascend
         {

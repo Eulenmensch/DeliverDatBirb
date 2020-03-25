@@ -78428,6 +78428,7 @@ MonoBehaviour:
   FlapHeight: 1.46
   FallModifier: 2.5
   ShortJumpModifier: 2
+  GlideModifier: 0.04
 --- !u!23 &1565332945
 MeshRenderer:
   m_ObjectHideFlags: 0
