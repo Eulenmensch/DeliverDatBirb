@@ -30,8 +30,6 @@ public class PlayerController : MonoBehaviour
     private Vector3 MoveDirection;
     private Vector3 VelocityGravitational;
 
-    private bool IsJumping;
-    private bool IsFlapping;
 
     private void Start()
     {
@@ -73,21 +71,21 @@ public class PlayerController : MonoBehaviour
     {
         if (IsGrounded())
         {
-            if (IsReceivingJumpInput && !IsJumping && HasStoppedReceivingJumpInput)
+            if (IsReceivingJumpInput && PlayerStates.Instance.MotionState == PlayerStates.MotionStates.Default && HasStoppedReceivingJumpInput)
             {
                 HasStoppedReceivingJumpInput = false;
-                IsJumping = true;
+                PlayerStates.Instance.MotionState = PlayerStates.MotionStates.Jumping;
             }
-            else if (IsJumping) // else if so that if you get jumpinput you don't set it back to false on the same frame
+            else if (PlayerStates.Instance.MotionState == PlayerStates.MotionStates.Jumping)
             {
-                IsJumping = false;
+                PlayerStates.Instance.MotionState = PlayerStates.MotionStates.Default;
             }
         }
     }
 
     void ApplyJumpInput()
     {
-        if (IsJumping)
+        if (PlayerStates.Instance.MotionState == PlayerStates.MotionStates.Jumping)
         {
             MoveDirection.y = Mathf.Sqrt(JumpHeight * -2f * -GravitationalAcceleration);
         }
@@ -97,21 +95,20 @@ public class PlayerController : MonoBehaviour
     {
         if (IsReceivingFlapInput && !IsGrounded())
         {
-            IsFlapping = true;
+            PlayerStates.Instance.MotionState = PlayerStates.MotionStates.Flapping;
             VelocityGravitational.y = 0.0f;
             IsReceivingFlapInput = false;
         }
-        else if (IsGrounded())
+        else if (IsGrounded() && PlayerStates.Instance.MotionState == PlayerStates.MotionStates.Flapping)
         {
-            IsFlapping = false;
+            PlayerStates.Instance.MotionState = PlayerStates.MotionStates.Default;
         }
     }
 
     void ApplyFlapInput()
     {
-        if (IsFlapping)
+        if (PlayerStates.Instance.MotionState == PlayerStates.MotionStates.Flapping)
         {
-            IsJumping = false;
             MoveDirection.y = Mathf.Sqrt(FlapHeight * -2f * -GravitationalAcceleration);
         }
     }
@@ -123,7 +120,7 @@ public class PlayerController : MonoBehaviour
         {
             VelocityGravitational.y = 0.0f;
         }
-        else if (IsJumping && !IsReceivingJumpInput && currentVelocityY >= 0) // make the jump shorter if the jump button was released before reaching the apex
+        else if (PlayerStates.Instance.MotionState == PlayerStates.MotionStates.Jumping && !IsReceivingJumpInput && currentVelocityY >= 0) // make the jump shorter if the jump button was released before reaching the apex
         {
             VelocityGravitational.y -= GravitationalAcceleration * ShortJumpModifier * Time.deltaTime;
         }
