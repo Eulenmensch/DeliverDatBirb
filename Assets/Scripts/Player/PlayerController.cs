@@ -95,6 +95,7 @@ public class PlayerController : MonoBehaviour
     {
         if (IsReceivingFlapInput && !IsGrounded())
         {
+            HasStoppedReceivingJumpInput = false; //to prevent an unintended jump when keeping the jump button held after a flap
             PlayerStates.Instance.MotionState = PlayerStates.MotionStates.Flapping;
             VelocityGravitational.y = 0.0f;
             IsReceivingFlapInput = false;
