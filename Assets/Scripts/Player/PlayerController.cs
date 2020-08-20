@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using DG.Tweening;
 
 public class PlayerController : MonoBehaviour
 {
     private CharacterController CharacterControllerRef;
 
     public GameObject Camera;
-    public Transform GroundCheckSphere;
-    public float GroundCheckRadius;
-    public LayerMask GroundLayerMask;
+    // public Transform GroundCheckSphere;
+    // public float GroundCheckRadius;
+    // public LayerMask GroundLayerMask;
 
     public float Speed;
     public float AirControlFactor;
@@ -46,6 +47,7 @@ public class PlayerController : MonoBehaviour
         HandleFlapInput();
         ApplyFlapInput();
         ApplyGravity();
+        SetRotationToMoveDirection();
         Debug.DrawRay(transform.position, MoveDirection, Color.magenta); //TODO Remove this after debugging
         CharacterControllerRef.Move(MoveDirection * Time.deltaTime);
     }
@@ -140,9 +142,19 @@ public class PlayerController : MonoBehaviour
         MoveDirection.y += VelocityGravitational.y;
     }
 
+    void SetRotationToMoveDirection()
+    {
+        Vector3 lookDirection = new Vector3(HorizontalInput, 0.0f, VerticalInput);
+        if (lookDirection.magnitude >= 0.1)
+        {
+            transform.DORotateQuaternion(Quaternion.LookRotation(lookDirection, Vector3.up), 0.4f).SetEase(Ease.OutCirc);
+        }
+    }
+
     bool IsGrounded()
     {
-        return Physics.CheckSphere(GroundCheckSphere.position, GroundCheckRadius, GroundLayerMask);
+        // return Physics.CheckSphere(GroundCheckSphere.position, GroundCheckRadius, GroundLayerMask);
+        return (CharacterControllerRef.collisionFlags & CollisionFlags.Below) != 0;
     }
 
     public void GetMoveInput(InputAction.CallbackContext context)
