@@ -12,23 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 363227210167b0849b0f495fc8bd8316, type: 3}
   m_Name: DefaultHBAORendererSettings
   m_EditorClassIdentifier: 
-  enable: 1
+  enable: 0
   quality: 4
   resolution: 0
   displayMode: 0
   radius: 2.31
   maxRadiusPixels: 115.7
   bias: 0.224
-  intensity: 1.69
-  useMultiBounce: 0
-  multiBounceInfluence: 0.555
+  intensity: 1.1
+  useMultiBounce: 1
+  multiBounceInfluence: 0.398
   offscreenSamplesContribution: 0
   maxDistance: 150
   distanceFalloff: 50
   perPixelNormals: 1
   baseColor: {r: 0.026388895, g: 0.015277776, b: 0.05, a: 1}
   blurType: 2
-  sharpness: 3.15
+  sharpness: 2.31
   enableColorBleeding: 1
   saturation: 0.568
   brightnessMask: 1
