@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 363227210167b0849b0f495fc8bd8316, type: 3}
   m_Name: DefaultHBAORendererSettings
   m_EditorClassIdentifier: 
-  enable: 0
+  enable: 1
   quality: 4
   resolution: 0
   displayMode: 0

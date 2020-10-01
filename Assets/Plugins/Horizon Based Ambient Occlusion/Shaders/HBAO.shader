@@ -1,990 +1,405 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Hidden/HBAO"
+﻿Shader "Hidden/HBAO"
 {
 	Properties {
-		_MainTex ("", 2D) = "" {}
-		_HBAOTex ("", 2D) = "" {}
+		_MainTex ("", any) = "" {}
+		_HBAOTex ("", any) = "" {}
+        _TempTex("", any) = "" {}
 		_NoiseTex("", 2D) = "" {}
-		_DepthTex("", 2D) = "" {}
-		_NormalsTex("", 2D) = "" {}
-		_rt0Tex("", 2D) = "" {}
-		_rt3Tex("", 2D) = "" {}
+		_DepthTex("", any) = "" {}
+		_NormalsTex("", any) = "" {}
 	}
 
 	CGINCLUDE
-		#pragma target 3.0
 
-        // for Unity 2019.1+, you can uncomment this and comment older Unity pragmas
-        //#pragma multi_compile_local __ DEFERRED_SHADING ORTHOGRAPHIC_PROJECTION
-        //#pragma multi_compile_local __ COLOR_BLEEDING
-        //#pragma multi_compile_local __ OFFSCREEN_SAMPLES_CONTRIB
-        //#pragma multi_compile_local __ NORMALS_CAMERA NORMALS_RECONSTRUCT
-        // for older Unity
-        #pragma multi_compile __ DEFERRED_SHADING ORTHOGRAPHIC_PROJECTION
-        #pragma multi_compile __ COLOR_BLEEDING
-        #pragma multi_compile __ OFFSCREEN_SAMPLES_CONTRIB
-        #pragma multi_compile __ NORMALS_CAMERA NORMALS_RECONSTRUCT
+    #pragma target 3.0
+    #pragma editor_sync_compilation
 
-		#include "UnityCG.cginc"
+    #include "UnityCG.cginc"
+        
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_HBAOTex);
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_TempTex);
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture);
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0); // diffuse color (RGB), occlusion (A)
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2); // normal (rgb), --unused-- (a)
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture);
+    UNITY_DECLARE_SCREENSPACE_TEXTURE(_NormalsTex);
+    UNITY_DECLARE_TEX2D(_NoiseTex);
 
-		#if !defined(UNITY_UNROLL)
-		#if defined(UNITY_COMPILER_HLSL)
-		#define UNITY_UNROLL	[unroll]
-		#else
-		#define UNITY_UNROLL
-		#endif
-		#endif
+    UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
+    UNITY_DECLARE_DEPTH_TEXTURE(_DepthTex);
 
-		#if UNITY_VERSION < 560
-        #define UNITY_DECLARE_DEPTH_TEXTURE(tex) sampler2D_float tex
-        #define UNITY_DECLARE_SCREENSPACE_TEXTURE(tex) UNITY_DECLARE_TEX2D(tex)
-        #define UNITY_SAMPLE_SCREENSPACE_TEXTURE(tex, uv) UNITY_SAMPLE_TEX2D(tex,uv)
+    CBUFFER_START(FrequentlyUpdatedUniforms)
+    float4 _Input_TexelSize;
+    float4 _AO_TexelSize;
+    float4 _DeinterleavedAO_TexelSize;
+    float4 _ReinterleavedAO_TexelSize;
+    float4 _TargetScale;
+	float4 _UVToView;
+	float4x4 _WorldToCameraMatrix;
+	float _Radius;
+	float _MaxRadiusPixels;
+	float _NegInvRadius2;
+	float _AngleBias;
+	float _AOmultiplier;
+	float _Intensity;
+	half4 _BaseColor;
+    float _MultiBounceInfluence;
+    float _OffscreenSamplesContrib;
+    float _MaxDistance;
+    float _DistanceFalloff;
+	float _BlurSharpness;
+	float _ColorBleedSaturation;
+	float _AlbedoMultiplier;
+	float _ColorBleedBrightnessMask;
+	float2 _ColorBleedBrightnessMaskRange;
+    float2 _TemporalParams;
+	CBUFFER_END
+
+    CBUFFER_START(PerPassUpdatedUniforms)
+    float4 _UVTransform;
+    float2 _BlurDeltaUV;
+    CBUFFER_END
+
+	CBUFFER_START(PerPassUpdatedDeinterleavingUniforms)
+	float2 _Deinterleave_Offset00;
+	float2 _Deinterleave_Offset10;
+	float2 _Deinterleave_Offset01;
+	float2 _Deinterleave_Offset11;
+	float2 _AtlasOffset;
+	float2 _Jitter;
+	CBUFFER_END
+
+    struct Attributes
+    {
+        float3 vertex : POSITION;
+    };
+
+    struct Varyings
+    {
+        float4 vertex : SV_POSITION;
+        float2 uv : TEXCOORD0;
+        //float2 uvStereo : TEXCOORD1;
+        //#if STEREO_INSTANCING_ENABLED
+        //uint stereoTargetEyeIndex : SV_RenderTargetArrayIndex;
+        //#endif
+    };
+
+    float2 TransformTriangleVertexToUV(float2 vertex)
+    {
+        float2 uv = (vertex + 1.0) * 0.5;
+        return uv;
+    }
+
+    Varyings Vert_Default(Attributes input)
+    {
+        Varyings o;
+        o.vertex = float4(input.vertex.xy, 0.0, 1.0);
+        o.uv = TransformTriangleVertexToUV(input.vertex.xy);
+
+        #if UNITY_UV_STARTS_AT_TOP
+        o.uv = o.uv * float2(1.0, -1.0) + float2(0.0, 1.0);
         #endif
 
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_HBAOTex);
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_rt0Tex);
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_rt3Tex);
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture);
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0); // diffuse color (RGB), occlusion (A)
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2); // normal (rgb), --unused-- (a)
-        UNITY_DECLARE_SCREENSPACE_TEXTURE(_NormalsTex);
-        UNITY_DECLARE_TEX2D(_NoiseTex);
+        //o.uvStereo = TransformStereoScreenSpaceTex(o.uv, 1.0);
+        o.uv = TransformStereoScreenSpaceTex(o.uv, 1.0);
 
-        UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
-        UNITY_DECLARE_DEPTH_TEXTURE(_DepthTex);
+        return o;
+    }
 
-		float4 _CameraDepthTexture_ST;
-		float4 _MainTex_ST;
-        float4 _MainTex_TexelSize;
+    Varyings Vert_Atlas(Attributes input)
+    {
+        Varyings o;
+        o.vertex = float4((input.vertex.xy + float2(-3.0, 1.0)) * (_DeinterleavedAO_TexelSize.zw / _ReinterleavedAO_TexelSize.zw) + 2.0 * _AtlasOffset * _ReinterleavedAO_TexelSize.xy, 0.0, 1.0);
+        o.uv = TransformTriangleVertexToUV(input.vertex.xy);
 
-		CBUFFER_START(FrequentlyUpdatedUniforms)
-		float4 _UVToView;
-		float4x4 _WorldToCameraMatrix;
-		float _Radius;
-		float _MaxRadiusPixels;
-		float _NegInvRadius2;
-		float _AngleBias;
-		float _AOmultiplier;
-		float _Intensity;
-		half4 _BaseColor;
-		float _BlurSharpness;
-		float _ColorBleedSaturation;
-		float _AlbedoMultiplier;
-		float _ColorBleedBrightnessMask;
-		float2 _ColorBleedBrightnessMaskRange;
-		float _MultiBounceInfluence;
-		float _OffscreenSamplesContrib;
-		float _MaxDistance;
-		float _DistanceFalloff;
-		float4 _TargetScale;
-		CBUFFER_END
+        // flip triangle upside down
+        o.vertex.y = 1 - o.vertex.y;
 
-		CBUFFER_START(FrequentlyUpdatedDeinterleavingUniforms)
-		float4 _FullRes_TexelSize;
-		float4 _LayerRes_TexelSize;
-		CBUFFER_END
+        //o.uvStereo = TransformStereoScreenSpaceTex(o.uv, 1.0);
+        o.uv = TransformStereoScreenSpaceTex(o.uv, 1.0);
 
-		CBUFFER_START(PerPassUpdatedDeinterleavingUniforms)
-		float2 _Deinterleaving_Offset00;
-		float2 _Deinterleaving_Offset10;
-		float2 _Deinterleaving_Offset01;
-		float2 _Deinterleaving_Offset11;
-		float2 _LayerOffset;
-		float4 _Jitter;
-		CBUFFER_END
+        return o;
+    }
 
-		struct DeinterleavedOutput {
-			float4 Z00 : SV_Target0;
-			float4 Z10 : SV_Target1;
-			float4 Z01 : SV_Target2;
-			float4 Z11 : SV_Target3;
-		};
+    Varyings Vert_UVTransform(Attributes input)
+    {
+        Varyings o;
+        o.vertex = float4(input.vertex.xy, 0.0, 1.0);
+        o.uv = TransformTriangleVertexToUV(input.vertex.xy) * _UVTransform.xy + _UVTransform.zw;
 
-		struct v2f {
-			float2 uv : TEXCOORD0;
-			float2 uv2 : TEXCOORD1;
-		};
+        //o.uvStereo = TransformStereoScreenSpaceTex(o.uv, 1.0);
+        o.uv = TransformStereoScreenSpaceTex(o.uv, 1.0);
 
-		v2f vert(appdata_img v, out float4 outpos : SV_POSITION) {
-			v2f o;
-			o.uv = v.texcoord.xy;
-			o.uv2 = v.texcoord.xy;
-			#if UNITY_UV_STARTS_AT_TOP
-			if (_MainTex_TexelSize.y < 0)
-				o.uv2.y = 1 - o.uv2.y;
-			#endif
-			outpos = UnityObjectToClipPos(v.vertex);
-			return o;
-		}
+        //#if STEREO_INSTANCING_ENABLED
+        //o.stereoTargetEyeIndex = (uint)_DepthSlice;
+        //#endif
 
-		v2f vert_mesh(appdata_img v, out float4 outpos : SV_POSITION) {
-			v2f o;
-			o.uv = v.texcoord;
-			o.uv2 = v.texcoord;
-			if (_ProjectionParams.x < 0)
-				o.uv2.y = 1 - o.uv2.y;
-			outpos = v.vertex * float4(2, 2, 0, 0) + float4(0, 0, 0, 1);
-			#ifdef UNITY_HALF_TEXEL_OFFSET
-			outpos.xy += (1.0 / _ScreenParams.xy) * float2(-1, 1);
-			#endif
-			return o;
-		}
-
-		v2f vert_atlas(appdata_img v, out float4 outpos : SV_POSITION) {
-			v2f o;
-			o.uv = v.texcoord.xy;
-			o.uv2 = v.texcoord.xy;
-			#ifdef UNITY_UV_STARTS_AT_TOP
-			if (_MainTex_TexelSize.y < 0)
-				o.uv2.y = 1 - o.uv2.y;
-			#endif
-			outpos = UnityObjectToClipPos(float4(v.vertex.xy * (_LayerRes_TexelSize.zw / _FullRes_TexelSize.zw) + _LayerOffset * _FullRes_TexelSize.xy, v.vertex.zw));
-			return o;
-		}
-
-		inline half4 FetchOcclusion(float2 uv) {
-			#if UNITY_SINGLE_PASS_STEREO
-			half4 occ = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_HBAOTex, UnityStereoTransformScreenSpaceTex(uv) * _TargetScale.zw);
-			#else
-            half4 occ = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_HBAOTex, uv * _TargetScale.zw);
-			#endif
-			occ.a = saturate(pow(occ.a, _Intensity));
-			return occ;
-		}
-
-		inline half4 FetchSceneColor(float2 uv) {
-			#if UNITY_SINGLE_PASS_STEREO
-			half4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(uv));
-			#else
-			half4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, uv);
-			#endif
-			return col;
-		}
-
-		inline half3 MultiBounceAO(float visibility, half3 albedo) {
-			half3 a = 2.0404 * albedo - 0.3324;
-			half3 b = -4.7951 * albedo + 0.6417;
-			half3 c = 2.7552 * albedo + 0.6903;
-
-			float x = visibility;
-			return max(x, ((x * a + b) * x + c) * x);
-		}
+        return o;
+    }
 
 	ENDCG
 
 	SubShader {
+        LOD 100
 		ZTest Always Cull Off ZWrite Off
 
-		// 0: hbao pass (lowest quality)
+		// 0
 		Pass {
+            Name "HBAO - AO"
+
 			CGPROGRAM
+            #pragma multi_compile_local __ DEFERRED_SHADING ORTHOGRAPHIC_PROJECTION
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local __ OFFSCREEN_SAMPLES_CONTRIBUTION
+            #pragma multi_compile_local __ NORMALS_CAMERA NORMALS_RECONSTRUCT
+            #pragma multi_compile_local __ INTERLEAVED_GRADIENT_NOISE
+            #pragma multi_compile_local DIRECTIONS_3 DIRECTIONS_4 DIRECTIONS_6 DIRECTIONS_8
+            #pragma multi_compile_local STEPS_2 STEPS_3 STEPS_4 STEPS_6
 
-				#pragma vertex vert
-				#pragma fragment frag
+            #if DIRECTIONS_3
+                #define DIRECTIONS  3
+            #elif DIRECTIONS_4
+                #define DIRECTIONS  4
+            #elif DIRECTIONS_6
+                #define DIRECTIONS  6
+            #elif DIRECTIONS_8
+                #define DIRECTIONS  8
+            #endif
 
-				#define DIRECTIONS		3
-				#define STEPS			2
-				#include "HBAO_frag.cginc"
+            #if STEPS_2
+                #define STEPS       2
+            #elif STEPS_3
+                #define STEPS       3
+            #elif STEPS_4
+                #define STEPS       4
+            #elif STEPS_6
+                #define STEPS       6
+            #endif
 
+            #pragma vertex Vert_Default
+            #pragma fragment AO_Frag
+
+            #include "HBAO_AO.cginc"
 			ENDCG
 		}
 
-		// 1: hbao pass (low quality)
+		// 1
 		Pass {
+            Name "HBAO - AO Deinterleaved"
+
 			CGPROGRAM
+            #pragma multi_compile_local __ DEFERRED_SHADING ORTHOGRAPHIC_PROJECTION
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local __ OFFSCREEN_SAMPLES_CONTRIBUTION
+            #pragma multi_compile_local DIRECTIONS_3 DIRECTIONS_4 DIRECTIONS_6 DIRECTIONS_8
+            #pragma multi_compile_local STEPS_2 STEPS_3 STEPS_4 STEPS_6
 
-				#pragma vertex vert
-				#pragma fragment frag
+            #if DIRECTIONS_3
+                #define DIRECTIONS  3
+            #elif DIRECTIONS_4
+                #define DIRECTIONS  4
+            #elif DIRECTIONS_6
+                #define DIRECTIONS  6
+            #elif DIRECTIONS_8
+                #define DIRECTIONS  8
+            #endif
 
-				#define DIRECTIONS		4
-				#define STEPS			3
-				#include "HBAO_frag.cginc"
+            #if STEPS_2
+                #define STEPS       2
+            #elif STEPS_3
+                #define STEPS       3
+            #elif STEPS_4
+                #define STEPS       4
+            #elif STEPS_6
+                #define STEPS       6
+            #endif
 
+            #define DEINTERLEAVED
+
+            #pragma vertex Vert_Default
+            #pragma fragment AO_Frag
+
+            #include "HBAO_AO.cginc"
 			ENDCG
 		}
 
-		// 2: hbao pass (medium quality)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		6
-				#define STEPS			4
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 3: hbao pass (high quality)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		8
-				#define STEPS			4
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 4: hbao pass (highest quality)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		8
-				#define STEPS			6
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 5: hbao pass (lowest quality / deinterleaved)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		3
-				#define STEPS			2
-				#define DEINTERLEAVED	1
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 6: hbao pass (low quality / deinterleaved)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		4
-				#define STEPS			3
-				#define DEINTERLEAVED	1
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 7: hbao pass (medium quality / deinterleaved)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		6
-				#define STEPS			4
-				#define DEINTERLEAVED	1
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 8: hbao pass (high quality / deinterleaved)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		8
-				#define STEPS			4
-				#define DEINTERLEAVED	1
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 9: hbao pass (highest quality / deinterleaved)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DIRECTIONS		8
-				#define STEPS			6
-				#define DEINTERLEAVED	1
-				#include "HBAO_frag.cginc"
-
-			ENDCG
-		}
-
-		// 10: deinterleave depth 2x2
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert_mesh
-				#pragma fragment frag
-
-				#define DOWNSCALING_FACTOR		2
-				#include "HBAO_DeinterleaveDepth_frag.cginc"
-
-			ENDCG
-		}
-
-		// 11: deinterleave depth 4x4
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert_mesh
-				#pragma fragment frag
-
-				#define DOWNSCALING_FACTOR		4
-				#include "HBAO_DeinterleaveDepth_frag.cginc"
-
-			ENDCG
-		}
-
-		// 12: deinterleave normals 2x2
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert_mesh
-				#pragma fragment frag
-
-				#define DOWNSCALING_FACTOR		2
-				#include "HBAO_DeinterleaveNormals_frag.cginc"
-
-			ENDCG
-		}
-
-		// 13: deinterleave normals 4x4
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert_mesh
-				#pragma fragment frag
-
-				#define DOWNSCALING_FACTOR		4
-				#include "HBAO_DeinterleaveNormals_frag.cginc"
-
-			ENDCG
-		}
-
-		// 14: atlassing input layer to output
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert_atlas
-				#pragma fragment frag
-
-				half4 frag(v2f i) : SV_Target {
-					return UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, i.uv2);
-				}
-
-			ENDCG
-		}
-
-		// 15: reinterleave 2x2 from atlas
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DOWNSCALING_FACTOR		2
-				#include "HBAO_Reinterleave_frag.cginc"
-
-			ENDCG
-		}
-
-		// 16: reinterleave 4x4 from atlas
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define DOWNSCALING_FACTOR		4
-				#include "HBAO_Reinterleave_frag.cginc"
-
-			ENDCG
-		}
-
-		// 17: blur X pass (narrow)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		2
-				#include "HBAO_BlurX_frag.cginc"
-
-			ENDCG
-		}
-
-		// 18: blur X pass (medium)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		3
-				#include "HBAO_BlurX_frag.cginc"
-
-			ENDCG
-		}
-
-		// 19: blur X pass (wide)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		4
-				#include "HBAO_BlurX_frag.cginc"
-
-			ENDCG
-		}
-
-		// 20: blur X pass (extra wide)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		5
-				#include "HBAO_BlurX_frag.cginc"
-
-			ENDCG
-		}
-
-		// 21: blur Y pass (narrow)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		2
-				#include "HBAO_BlurY_frag.cginc"
-
-			ENDCG
-		}
-
-		// 22: blur Y pass (medium)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		3
-				#include "HBAO_BlurY_frag.cginc"
-
-			ENDCG
-		}
-
-		// 23: blur Y pass (wide)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		4
-				#include "HBAO_BlurY_frag.cginc"
-
-			ENDCG
-		}
-
-		// 24: blur Y pass (extra wide)
-		Pass {
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#define KERNEL_RADIUS		5
-				#include "HBAO_BlurY_frag.cginc"
-
-			ENDCG
-		}
-
-		// 25: composite pass
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-							
-				half4 frag (v2f i) : SV_Target {
-					half4 ao = FetchOcclusion(i.uv2);
-					half4 col = FetchSceneColor(i.uv);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					col.rgb *= aoColor;
-				#if COLOR_BLEEDING
-					return half4(col.rgb + (1 - ao.rgb), col.a);
-				#else
-					return col;
-				#endif
-				}
-				
-			ENDCG
-		}
-
-		// 26: composite pass (MultiBounce)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				half4 frag(v2f i) : SV_Target {
-					half4 ao = FetchOcclusion(i.uv2);
-					half4 col = FetchSceneColor(i.uv);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					col.rgb *= lerp(aoColor, MultiBounceAO(ao.a, lerp(col.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence);
-				#if COLOR_BLEEDING
-					return half4(col.rgb + (1 - ao.rgb), col.a);
-				#else
-					return col;
-				#endif
-				}
-
-			ENDCG
-		}
-
-		// 27: show pass (AO only)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-				
-				half4 frag (v2f i) : SV_Target {
-					half4 ao = FetchOcclusion(i.uv2);
-					half4 col = FetchSceneColor(i.uv);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					return half4(aoColor, 1.0);
-				}
-				
-			ENDCG
-		}
-
-		// 28: show pass (AO only MultiBounce)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				half4 frag(v2f i) : SV_Target {
-					half4 ao = FetchOcclusion(i.uv2);
-					half4 col = FetchSceneColor(i.uv);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					return half4(lerp(aoColor, MultiBounceAO(ao.a, lerp(col.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence), 1.0);
-				}
-
-			ENDCG
-		}
-
-		// 29: show pass (Color Bleeding only)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-							
-				half4 frag (v2f i) : SV_Target {
-					half4 ao = FetchOcclusion(i.uv2);
-					return lerp(half4(0.0, 0.0, 0.0, 1.0), half4(1 - ao.rgb, 1.0), _ColorBleedSaturation);
-				}
-				
-			ENDCG
-		}
-
-		// 30: show pass (split without AO / with AO)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-				
-				half4 frag (v2f i) : SV_Target {
-					half4 col = FetchSceneColor(i.uv);
-					if (i.uv.x <= 0.4985) {
-						return col;
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 1.0);
-					}
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					ao = half4(aoColor, 1.0);
-					return col * ao;
-				}
-				
-			ENDCG
-		}
-
-		// 31: show pass (split without AO / with AO MultiBounce)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				half4 frag(v2f i) : SV_Target {
-					half4 col = FetchSceneColor(i.uv);
-					if (i.uv.x <= 0.4985) {
-						return col;
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 1.0);
-					}
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					col.rgb *= lerp(aoColor, MultiBounceAO(ao.a, lerp(col.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence);
-					return col;
-				}
-
-			ENDCG
-		}
-
-		// 32: show pass (split with AO / AO only)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-				
-				half4 frag (v2f i) : SV_Target {
-					half4 col = FetchSceneColor(i.uv);
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					ao = half4(aoColor, 1.0);
-					if (i.uv.x <= 0.4985) {
-						return col * ao;
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 1.0);
-					}
-					return ao;
-				}
-				
-			ENDCG
-		}
-
-		// 33: show pass (split with AO / AO only MultiBounce)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				half4 frag(v2f i) : SV_Target {
-					half4 col = FetchSceneColor(i.uv);
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					ao = half4(lerp(aoColor, MultiBounceAO(ao.a, lerp(col.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence), 1);
-					if (i.uv.x <= 0.4985) {
-						return col * ao;
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 1.0);
-					}
-					return ao;
-				}
-
-			ENDCG
-		}
-
-		// 34: show pass (split without AO / AO only)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-				
-				half4 frag (v2f i) : SV_Target {
-					half4 col = FetchSceneColor(i.uv);
-					if (i.uv.x <= 0.4985) {
-						return col;
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 1.0);
-					}
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					ao = half4(aoColor, 1.0);
-					return ao;
-				}
-				
-			ENDCG
-		}
-
-		// 35: show pass (split without AO / AO only MultiBounce)
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				half4 frag(v2f i) : SV_Target {
-					half4 col = FetchSceneColor(i.uv);
-					if (i.uv.x <= 0.4985) {
-						return col;
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 1.0);
-					}
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					ao = half4(lerp(aoColor, MultiBounceAO(ao.a, lerp(col.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence), 1);
-					return ao;
-				}
-
-			ENDCG
-		}
-
-		// 36: combine deferred
-		Pass {
-			CGPROGRAM
-
-                #pragma vertex vert_mesh
-                #pragma fragment frag
-
-                #include "HBAO_Deferred.cginc"
-
-			ENDCG
-		}
-
-		// 37: combine deferred HDR (multiplicative blending)
-		Pass {
-			Blend DstColor Zero, DstAlpha Zero
-			CGPROGRAM
-
-				#pragma vertex vert_mesh
-				#pragma fragment frag_blend
-
-				#include "HBAO_Deferred.cginc"
-
-			ENDCG
-		}
-
-		// 38: combine integrated
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag
-
-				#include "HBAO_Integrated.cginc"
-
-			ENDCG
-		}
-
-		// 39: combine integrated MultiBounce
-		Pass {
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_multibounce
-
-				#include "HBAO_Integrated.cginc"
-
-			ENDCG
-		}
-
-		// 40: combine integrated HDR (multiplicative blending)
-		Pass {
-			Blend DstColor Zero
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend
-
-				#include "HBAO_Integrated.cginc"
-
-			ENDCG
-		}
-
-		// 41: combine integrated HDR MultiBounce (multiplicative blending)
-		Pass {
-			Blend DstColor Zero
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend_multibounce
-
-				#include "HBAO_Integrated.cginc"
-
-			ENDCG
-		}
-
-		// 42: combine color bleeding HDR (additive blending)
-		Pass {
-			Blend One One
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend
-
-				half4 frag_blend(v2f i) : SV_Target {
-					return half4(1 - FetchOcclusion(i.uv2).rgb, 1.0);
-				}
-
-			ENDCG
-		}
-
-		// 43: AO debug pass (additive blending)
-		Pass {
-			Blend One Zero
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend
-
-				half4 frag_blend(v2f i) : SV_Target {
-					if (i.uv.x <= 0.4985) {
-						clip(-1);
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 0);
-					}
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					return half4(aoColor, 0);
-				}
-
-			ENDCG
-		}
-
-		// 44: AO debug pass MultiBounce (additive blending)
-		Pass {
-			Blend One Zero
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend
-
-				half4 frag_blend(v2f i) : SV_Target {
-					if (i.uv.x <= 0.4985) {
-						clip(-1);
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 0);
-					}
-				#if UNITY_SINGLE_PASS_STEREO
-					float2 uv = UnityStereoTransformScreenSpaceTex(i.uv2);
-					half3 rt3 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_rt3Tex, uv);
-				#else
-					half3 rt3 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_rt3Tex, i.uv2);
-				#endif
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					return half4(lerp(aoColor, MultiBounceAO(ao.a, lerp(rt3.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence), 0);
-				}
-
-			ENDCG
-		}
-
-		// 45: AO debug pass (multiplicative blending)
-		Pass {
-			Blend DstColor Zero
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend
-
-				half4 frag_blend(v2f i) : SV_Target {
-					if (i.uv.x <= 0.4985) {
-						clip(-1);
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 0);
-					}
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					return half4(aoColor, 0);
-				}
-
-			ENDCG
-		}
-
-		// 46: AO debug pass MultiBounce (multiplicative blending)
-		Pass {
-			Blend DstColor Zero
-			ColorMask RGB
-			CGPROGRAM
-
-				#pragma vertex vert
-				#pragma fragment frag_blend
-
-				half4 frag_blend(v2f i) : SV_Target {
-					if (i.uv.x <= 0.4985) {
-						clip(-1);
-					}
-					if (i.uv.x > 0.4985 && i.uv.x < 0.5015) {
-						return half4(0.0, 0.0, 0.0, 0);
-					}
-				#if UNITY_SINGLE_PASS_STEREO
-					float2 uv = UnityStereoTransformScreenSpaceTex(i.uv2);
-					half3 rt3 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_rt3Tex, uv);
-				#else
-					half3 rt3 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_rt3Tex, i.uv2);
-				#endif
-					half4 ao = FetchOcclusion(i.uv2);
-					half3 aoColor = lerp(_BaseColor.rgb, half3(1.0, 1.0, 1.0), ao.a);
-					return half4(lerp(aoColor, MultiBounceAO(ao.a, lerp(rt3.rgb, _BaseColor.rgb, _BaseColor.rgb)), _MultiBounceInfluence), 0);
-				}
-
-			ENDCG
-		}
-
+        // 2
         Pass {
-            //Blend One One
-            ColorMask RGB
+            Name "HBAO - Deinterleave Depth"
+
             CGPROGRAM
+            #pragma vertex Vert_Default
+            #pragma fragment DeinterleaveDepth_Frag
 
-                #pragma vertex vert
-                #pragma fragment frag
-
-                #define DIRECTIONS		6
-                #define STEPS			4
-                #define DEBUG_VIEWNORMALS
-                #include "HBAO_frag.cginc"
-
+            #include "HBAO_Deinterleaving.cginc"
             ENDCG
         }
 
+		// 3
+        Pass {
+            Name "HBAO - Deinterleave Normals"
+
+            CGPROGRAM
+            #pragma multi_compile_local __ ORTHOGRAPHIC_PROJECTION
+            #pragma multi_compile_local __ NORMALS_CAMERA NORMALS_RECONSTRUCT
+
+            #pragma vertex Vert_Default
+            #pragma fragment DeinterleaveNormals_Frag
+
+            #include "HBAO_Deinterleaving.cginc"
+            ENDCG
+		}
+
+		// 4
+		Pass {
+            Name "HBAO - Atlas Deinterleaved AO"
+
+			CGPROGRAM
+            #pragma vertex Vert_Atlas
+            #pragma fragment Frag
+
+            half4 Frag(Varyings input) : SV_Target {
+                return UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
+            }
+			ENDCG
+		}
+
+		// 5
+		Pass {
+            Name "HBAO - Reinterleave AO"
+
+			CGPROGRAM
+            #pragma vertex Vert_UVTransform
+            #pragma fragment ReinterleaveAO_Frag
+
+            #include "HBAO_Deinterleaving.cginc"
+			ENDCG
+		}
+
+		// 6
+		Pass {
+            Name "HBAO - Blur"
+
+			CGPROGRAM
+            #pragma multi_compile_local __ ORTHOGRAPHIC_PROJECTION
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local BLUR_RADIUS_2 BLUR_RADIUS_3 BLUR_RADIUS_4 BLUR_RADIUS_5
+
+            #if BLUR_RADIUS_2
+                #define KERNEL_RADIUS  2
+            #elif BLUR_RADIUS_3
+                #define KERNEL_RADIUS  3
+            #elif BLUR_RADIUS_4
+                #define KERNEL_RADIUS  4
+            #elif BLUR_RADIUS_5
+                #define KERNEL_RADIUS  5
+            #endif
+
+            #pragma vertex Vert_Default
+            #pragma fragment Blur_Frag
+
+            #include "HBAO_Blur.cginc"
+			ENDCG
+		}
+
+        // 7
+        Pass {
+            Name "HBAO - Temporal Filter"
+
+            CGPROGRAM
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local __ VARIANCE_CLIPPING_4TAP VARIANCE_CLIPPING_8TAP
+
+            #pragma vertex Vert_Default
+            #pragma fragment TemporalFilter_Frag
+
+            #include "HBAO_TemporalFilter.cginc"
+            ENDCG
+        }
+
+        // 8
+        Pass {
+            Name "HBAO - Copy"
+
+            CGPROGRAM
+            #pragma vertex Vert_Default
+            #pragma fragment Frag
+
+            half4 Frag(Varyings input) : SV_Target {
+                return UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
+            }
+            ENDCG
+        }
+
+        // 9
+        Pass {
+            Name "HBAO - Composite"
+
+            ColorMask RGB
+
+            CGPROGRAM
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local __ MULTIBOUNCE
+            #pragma multi_compile_local __ DEBUG_AO DEBUG_COLORBLEEDING DEBUG_NOAO_AO DEBUG_AO_AOONLY DEBUG_NOAO_AOONLY
+
+            #pragma vertex Vert_UVTransform
+            #pragma fragment Composite_Frag
+
+            #include "HBAO_Composite.cginc"
+            ENDCG
+        }
+
+        // 10
+        Pass {
+            Name "HBAO - Composite AfterLighting"
+
+            CGPROGRAM
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local __ MULTIBOUNCE
+            #pragma multi_compile_local __ LIGHTING_LOG_ENCODED
+
+            #pragma vertex Vert_Default
+            #pragma fragment Composite_Frag
+
+            #include "HBAO_Composite.cginc"
+            ENDCG
+        }
+
+        // 11
+        Pass {
+            Name "HBAO - Composite BeforeReflections"
+
+            CGPROGRAM
+            #pragma multi_compile_local __ COLOR_BLEEDING
+            #pragma multi_compile_local __ LIGHTING_LOG_ENCODED
+
+            #pragma vertex Vert_Default
+            #pragma fragment Composite_Lit_Frag
+
+            #include "HBAO_Composite.cginc"
+            ENDCG
+        }
+
+        // 12
+        Pass {
+            Name "HBAO - Debug ViewNormals"
+
+            ColorMask RGB
+
+            CGPROGRAM
+            #pragma multi_compile_local __ ORTHOGRAPHIC_PROJECTION
+            #pragma multi_compile_local __ NORMALS_CAMERA NORMALS_RECONSTRUCT
+
+            #pragma vertex Vert_UVTransform
+            #pragma fragment AO_Frag
+
+            #define DIRECTIONS		1
+            #define STEPS			1
+            #define DEBUG_VIEWNORMALS
+            #include "HBAO_AO.cginc"
+            ENDCG
+        }
 	}
 
 	FallBack off

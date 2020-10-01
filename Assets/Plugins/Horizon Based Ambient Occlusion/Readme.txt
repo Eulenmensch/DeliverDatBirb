@@ -14,16 +14,9 @@ quality to performance ratio.
 Usage
 -----------------------------------------------------------------------------
 
-This image effect now comes with 2 variants: HBAO and HBAO_Integrated.
-HBAO is the normal post FX way, HBAO_Integrated as its name implies is
-integrated into the rendering pipeline with command buffers. HBAO_Integrated
-is generally more flexible and allows PBR lit AO with "Before Reflections"
-integration stage.
-
-In order to use this image effect, just add one of the 2 script variant to your
-main camera.
-For this you can drag the HBAO.cs (or HBAO_Integrated) script on your camera or
-select it from the Add Component menu (Image Effects/HBAO).
+In order to use this image effect, just add HBAO compoment to your main camera.
+For this you can drag the HBAO.cs script on your camera or select it from the
+Add Component menu (Image Effects/HBAO).
 
 In most scenarios, using medium quality with a medium blur will yield very good
 results.
@@ -44,7 +37,6 @@ Important notice:
 The placement of the HBAO component in your post FX stack is really important!
 It should theoretically be the first effect in the chain meaning it should be
 placed on top.
-The above is still applicable to HBAO_Integrated.
 
 Shader Model 3.0 compatible hardware is required.
 
@@ -62,6 +54,34 @@ For any support request, please drop me an email at jimmikaelkael@gmail.com
 -----------------------------------------------------------------------------
 Changelog
 -----------------------------------------------------------------------------
+
+3.3
+  - Added VR support to Standard Render Pipeline HBAO
+
+3.2.1
+  - Added assembly definitions for editor scripts
+
+3.2
+  - Fixed colorbleeding white color bleed beyond max distance
+  - Switched HBAO for URP to Post Process VolumeComponent
+
+3.1
+  - Added HDRP support
+  - Added more settings helper methods
+  - Added namespaces for each render pipelines variants
+  - Use 16bit floating point texture format for noise when platform supports it
+  - Fixed wrong albedoMultipier setter method
+
+3.0
+  - Rewritten scripts/shaders code for Unity 2019.1+
+  - Added scene view effect
+  - Added temporal filtering
+  - Added interleaved gradient and spatial distribution noises
+  - Added possibility to stack AO components (both Standard and Universal Render Pipeline)
+  - Added UI for Universal Render Pipeline AO setting assets
+  - Fixed wrong RenderTextureFormat for color bleeding
+  - Fixed memory leaks
+  - Improved number of compiled shader variants
 
 2.9
   - Fixed URP version shader keywords problem resulting in blackscreen in builds
