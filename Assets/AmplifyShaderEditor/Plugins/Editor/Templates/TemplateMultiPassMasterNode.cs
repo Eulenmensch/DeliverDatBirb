@@ -1669,6 +1669,12 @@ namespace AmplifyShaderEditor
 				DrawPrecisionProperty( false );
 				if( EditorGUI.EndChangeCheck() )
 					ContainerGraph.CurrentPrecision = m_currentPrecisionType;
+
+				EditorGUI.BeginChangeCheck();
+				DrawSamplingMacros();
+				if( EditorGUI.EndChangeCheck() )
+					ContainerGraph.SamplingMacros = SamplingMacros;
+
 				m_drawInstancedHelper.Draw( this );
 				m_fallbackHelper.Draw( this );
 				DrawCustomInspector( m_templateMultiPass.SRPtype != TemplateSRPType.BuiltIn );
@@ -2302,6 +2308,7 @@ namespace AmplifyShaderEditor
 				afterNativesIncludePragmaDefineList.AddRange( m_currentDataCollector.DefinesList );
 				//includePragmaDefineList.AddRange( m_optionsDefineContainer.DefinesList );
 				afterNativesIncludePragmaDefineList.AddRange( m_currentDataCollector.PragmasList );
+				m_currentDataCollector.AddASEMacros();
 				afterNativesIncludePragmaDefineList.AddRange( m_currentDataCollector.AfterNativeDirectivesList );
 
 				//includePragmaDefineList.AddRange( m_currentDataCollector.MiscList );
@@ -2890,6 +2897,10 @@ namespace AmplifyShaderEditor
 					m_content.text = GenerateClippedTitle( m_passName );
 				}
 
+				if( UIUtils.CurrentShaderVersion() > 18302 )
+					m_samplingMacros = Convert.ToBoolean( GetCurrentParam( ref nodeParams ) );
+				else
+					m_samplingMacros = false;
 
 				//if( m_templateMultiPass != null && !m_templateMultiPass.IsSinglePass )
 				//{
@@ -2903,6 +2914,7 @@ namespace AmplifyShaderEditor
 
 			m_containerGraph.CurrentCanvasMode = NodeAvailability.TemplateShader;
 			m_containerGraph.CurrentPrecision = m_currentPrecisionType;
+			m_containerGraph.SamplingMacros = m_samplingMacros;
 		}
 
 		public override void WriteToString( ref string nodeInfo, ref string connectionsInfo )
@@ -2943,6 +2955,7 @@ namespace AmplifyShaderEditor
 			if( m_isMainOutputNode )
 				IOUtils.AddFieldValueToString( ref nodeInfo, m_mainLODName );
 
+			IOUtils.AddFieldValueToString( ref nodeInfo, m_samplingMacros );
 		}
 
 		public override void ReadFromDeprecated( ref string[] nodeParams, Type oldType = null )
@@ -3084,8 +3097,9 @@ namespace AmplifyShaderEditor
 					{
 						m_passModule.TagsHelper.ReadFromString( ref m_currentReadParamIdx, ref nodeParams );
 					}
-
 				}
+
+				m_samplingMacros = false;
 			}
 			catch( Exception e )
 			{

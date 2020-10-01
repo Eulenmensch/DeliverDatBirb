@@ -121,8 +121,8 @@ namespace AmplifyShaderEditor
 		private static ASESRPVersions m_currentHDVersion = ASESRPVersions.ASE_SRP_RECENT;
 		private static ASESRPVersions m_currentLWVersion = ASESRPVersions.ASE_SRP_RECENT;
 
-		private static int m_urpTemplateVersion = 6;
-		private static int m_hdrpTemplateVersion = 5;
+		private static int m_urpTemplateVersion = 8;
+		private static int m_hdrpTemplateVersion = 6;
 
 		private static Dictionary<string, ASESRPVersions> m_srpVersionConverter = new Dictionary<string, ASESRPVersions>()
 		{

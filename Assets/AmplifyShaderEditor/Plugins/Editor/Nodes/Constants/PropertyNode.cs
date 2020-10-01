@@ -1615,6 +1615,11 @@ namespace AmplifyShaderEditor
 				m_oldName = m_propertyName;
 			}
 
+			if( m_variableMode == VariableMode.Fetch )
+			{
+				CurrentVariableMode = VariableMode.Create;
+				CurrentVariableMode = VariableMode.Fetch;
+			}
 		}
 
 		void UpdateTooltip()

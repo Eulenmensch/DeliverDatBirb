@@ -457,9 +457,8 @@ namespace AmplifyShaderEditor
 			m_currentDataCollector.AddToUniforms( uniqueId, "float4", propertyHelperVar, IsSRP );
 			string uvName = string.Empty;
 			string result = string.Empty;
-			if( GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ uvChannel ], WirePortDataType.FLOAT4, PrecisionType.Float, ref result, false, m_currentDataCollector.PortCategory ) )
+			if( GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ uvChannel ], WirePortDataType.FLOAT2, PrecisionType.Float, ref result, false, m_currentDataCollector.PortCategory ) )
 			{
-				result += UIUtils.GetAutoSwizzle( WirePortDataType.FLOAT2 );
 				uvName = result;
 			}
 			else
@@ -492,10 +491,8 @@ namespace AmplifyShaderEditor
 		{
 			string uvName = string.Empty;
 			string result = string.Empty;
-			if( GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ uvChannel ], WirePortDataType.FLOAT4, PrecisionType.Float, ref result, false, m_currentDataCollector.PortCategory ) )
+			if( GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ uvChannel ], size, PrecisionType.Float, ref result, false, m_currentDataCollector.PortCategory ) )
 			{
-				if( size != WirePortDataType.FLOAT4 )
-					result += UIUtils.GetAutoSwizzle( size );
 				uvName = result;
 			}
 			else
@@ -529,6 +526,7 @@ namespace AmplifyShaderEditor
 		public string RegisterUV( int UVChannel, WirePortDataType size = WirePortDataType.FLOAT2 )
 		{
 			int channelsSize = TemplateHelperFunctions.DataTypeChannelUsage[ size ];
+			WirePortDataType originalSize = size;
 			if( m_UVUsage[ UVChannel ] > channelsSize )
 			{
 				size = TemplateHelperFunctions.ChannelToDataType[ m_UVUsage[ UVChannel ] ];
@@ -571,13 +569,15 @@ namespace AmplifyShaderEditor
 					break;
 					case WirePortDataType.FLOAT4:
 					case WirePortDataType.COLOR:
-					case WirePortDataType.OBJECT:
+					case WirePortDataType.FLOAT3x3:
 					case WirePortDataType.FLOAT4x4:
 					case WirePortDataType.SAMPLER1D:
 					case WirePortDataType.SAMPLER2D:
 					case WirePortDataType.SAMPLER3D:
 					case WirePortDataType.SAMPLERCUBE:
-					case WirePortDataType.FLOAT3x3:
+					case WirePortDataType.SAMPLER2DARRAY:
+					case WirePortDataType.SAMPLERSTATE:
+					case WirePortDataType.OBJECT:
 					default:
 					break;
 				}
@@ -631,6 +631,8 @@ namespace AmplifyShaderEditor
 					m_currentDataCollector.AddToVertexInterpolatorsDecl( interpDecl );
 					string finalVarName = m_currentTemplateData.FragmentFunctionData.InVarName + "." + availableInterp.VarNameWithSwizzle;
 					m_availableFragData.Add( TemplateHelperFunctions.IntToUVChannelInfo[ UVChannel ], new InterpDataHelper( size, finalVarName ) );
+					if( size != originalSize )
+						finalVarName = m_currentTemplateData.FragmentFunctionData.InVarName + "." + availableInterp.VarName+ UIUtils.GetAutoSwizzle( originalSize );
 					return finalVarName;
 				}
 			}
@@ -1139,10 +1141,10 @@ namespace AmplifyShaderEditor
 			if( HasCustomInterpolatedData( varName, useMasterNodeCategory, customCategory ) )
 				return varName;
 
-			string tangentValue = GetVertexTangent( WirePortDataType.FLOAT3, precisionType, false, MasterNodePortCategory.Vertex );
+			string tangentValue = GetVertexTangent( WirePortDataType.FLOAT4, precisionType, false, MasterNodePortCategory.Vertex );
 			string normalValue = GetVertexNormal( precisionType, false, MasterNodePortCategory.Vertex );
 
-			string bitangentValue = string.Format( "cross({0},{1})", normalValue, tangentValue );
+			string bitangentValue = string.Format( "cross( {0}, {1}.xyz ) * {1}.w * unity_WorldTransformParams.w", normalValue, tangentValue );
 			RegisterCustomInterpolatedData( varName, WirePortDataType.FLOAT3, precisionType, bitangentValue, useMasterNodeCategory, customCategory );
 			return varName;
 		}

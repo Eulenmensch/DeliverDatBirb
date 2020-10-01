@@ -289,6 +289,8 @@ namespace AmplifyShaderEditor
 			if( outlineDataCollector.UsingWorldNormal )
 				outlineDataCollector.AddInstructions( ( addTabs ? "\n\t\t\t" : "" ) + "o.Normal = float3(0,0,-1);" );
 
+			outlineDataCollector.AddASEMacros();
+
 			if( masterNode != null )
 			{
 				//masterNode.AdditionalIncludes.AddToDataCollector( ref outlineDataCollector );
@@ -303,6 +305,7 @@ namespace AmplifyShaderEditor
 			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.Includes = outlineDataCollector.Includes;
 			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.Pragmas = outlineDataCollector.Pragmas;
 			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.Defines = outlineDataCollector.Defines;
+			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.StandardAdditionalDirectives = outlineDataCollector.StandardAdditionalDirectives;
 			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.Uniforms = outlineDataCollector.Uniforms;
 			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.InstancedProperties = outlineDataCollector.InstancedProperties;
 			UIUtils.CurrentWindow.OutsideGraph.CurrentStandardSurface.OutlineHelper.GrabPasses = outlineDataCollector.GrabPass;

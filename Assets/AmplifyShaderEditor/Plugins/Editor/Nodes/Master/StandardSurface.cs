@@ -746,6 +746,11 @@ namespace AmplifyShaderEditor
 
 			m_receiveShadows = EditorGUILayoutToggle( ReceiveShadowsContent, m_receiveShadows );
 
+			EditorGUI.BeginChangeCheck();
+			DrawSamplingMacros();
+			if( EditorGUI.EndChangeCheck() )
+				ContainerGraph.SamplingMacros = m_samplingMacros;
+
 			m_drawInstancedHelper.Draw( this );
 
 			m_queueOrder = EditorGUILayoutIntField( QueueIndexContent, m_queueOrder );
@@ -925,9 +930,9 @@ namespace AmplifyShaderEditor
 						}
 					}
 
-					EditorGUIUtility.labelWidth = 130;
+					//EditorGUIUtility.labelWidth = 130;
 					m_inlineAlphaToCoverage.CustomDrawer( ref inst, ( x ) => { m_alphaToCoverage = EditorGUILayoutToggle( AlphaToCoverageStr, m_alphaToCoverage ); }, AlphaToCoverageStr.text );
-					EditorGUIUtility.labelWidth = cachedLabelWidth;
+					//EditorGUIUtility.labelWidth = cachedLabelWidth;
 					EditorGUI.EndDisabledGroup();
 
 					EditorGUILayout.Separator();
@@ -2030,6 +2035,7 @@ namespace AmplifyShaderEditor
 						if( m_currentDataCollector.DirtyPragmas/* && !m_customShadowCaster */)
 							ShaderBody += m_currentDataCollector.Pragmas;
 
+						m_currentDataCollector.AddASEMacros();
 						if( m_currentDataCollector.DirtyAdditionalDirectives )
 							ShaderBody += m_currentDataCollector.StandardAdditionalDirectives;
 
@@ -3112,6 +3118,11 @@ namespace AmplifyShaderEditor
 				if( UIUtils.CurrentShaderVersion() > 16207 )
 					m_inlineAlphaToCoverage.ReadFromString( ref m_currentReadParamIdx, ref nodeParams );
 
+				if( UIUtils.CurrentShaderVersion() > 18302 )
+					m_samplingMacros = Convert.ToBoolean( GetCurrentParam( ref nodeParams ) );
+				else
+					m_samplingMacros = false;
+
 				m_lightModelChanged = true;
 				m_lastLightModel = m_currentLightModel;
 				DeleteAllInputConnections( true );
@@ -3120,6 +3131,7 @@ namespace AmplifyShaderEditor
 				m_customBlendMode = TestCustomBlendMode();
 
 				ContainerGraph.CurrentPrecision = m_currentPrecisionType;
+				ContainerGraph.SamplingMacros = m_samplingMacros;
 			}
 			catch( Exception e )
 			{
@@ -3191,6 +3203,7 @@ namespace AmplifyShaderEditor
 			m_drawInstancedHelper.WriteToString( ref nodeInfo );
 			m_inlineChromaticAberration.WriteToString( ref nodeInfo );
 			m_inlineAlphaToCoverage.WriteToString( ref nodeInfo );
+			IOUtils.AddFieldValueToString( ref nodeInfo, m_samplingMacros );
 		}
 
 		private bool TestCustomBlendMode()

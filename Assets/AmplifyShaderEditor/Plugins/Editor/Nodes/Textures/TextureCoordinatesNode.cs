@@ -59,7 +59,7 @@ namespace AmplifyShaderEditor
 			base.CommonInit( uniqueId );
 			AddInputPort( WirePortDataType.SAMPLER2D, false, "Tex", -1, MasterNodePortCategory.Fragment, 2 );
 			m_texPort = m_inputPorts[ m_inputPorts.Count - 1 ];
-			m_texPort.CreatePortRestrictions( WirePortDataType.SAMPLER1D, WirePortDataType.SAMPLER2D, WirePortDataType.SAMPLER3D, WirePortDataType.SAMPLERCUBE, WirePortDataType.OBJECT );
+			m_texPort.CreatePortRestrictions( WirePortDataType.SAMPLER1D, WirePortDataType.SAMPLER2D, WirePortDataType.SAMPLER3D, WirePortDataType.SAMPLERCUBE, WirePortDataType.SAMPLER2DARRAY, WirePortDataType.OBJECT );
 
 			AddInputPort( WirePortDataType.FLOAT2, false, "Tiling", -1, MasterNodePortCategory.Fragment, 0 );
 			m_tilingPort = m_inputPorts[ m_inputPorts.Count - 1 ];
@@ -92,6 +92,7 @@ namespace AmplifyShaderEditor
 			base.OnInputPortConnected( portId, otherNodeId, otherPortId, activateNode );
 			if( portId == 2 )
 			{
+				m_texPort.MatchPortToConnection();
 				m_inputReferenceNode = m_texPort.GetOutputNodeWhichIsNotRelay() as TexturePropertyNode;
 				UpdatePorts();
 			}
@@ -107,6 +108,16 @@ namespace AmplifyShaderEditor
 				UpdatePorts();
 			}
 			UpdateTitle();
+		}
+
+		public override void OnConnectedOutputNodeChanges( int portId, int otherNodeId, int otherPortId, string name, WirePortDataType type )
+		{
+			base.OnConnectedOutputNodeChanges( portId, otherNodeId, otherPortId, name, type );
+			if( portId == 2 )
+			{
+				m_texPort.MatchPortToConnection();
+				UpdateTitle();
+			}
 		}
 
 		void UpdateTitle()
@@ -416,14 +427,18 @@ namespace AmplifyShaderEditor
 
 				string uvName = string.Empty;
 				string result = string.Empty;
-				if( dataCollector.TemplateDataCollectorInstance.GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ m_textureCoordChannel ], WirePortDataType.FLOAT4, PrecisionType.Float, ref result, false, dataCollector.PortCategory ) )
-				{
-					if( m_outputPorts[ 0 ].DataType != WirePortDataType.FLOAT4 )
-						result += UIUtils.GetAutoSwizzle( m_outputPorts[ 0 ].DataType );
-					uvName = result;
-				} else
+				string indexStr = m_textureCoordChannel > 0 ? ( m_textureCoordChannel + 1 ).ToString() : "";
+				string sizeDif = string.Empty;
+				if( m_texcoordSize == 3 )
+					sizeDif = "3";
+				else if( m_texcoordSize == 4 )
+					sizeDif = "4";
 
-				if( dataCollector.TemplateDataCollectorInstance.HasUV( m_textureCoordChannel ) )
+				if( dataCollector.TemplateDataCollectorInstance.GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ m_textureCoordChannel ], m_outputPorts[ 0 ].DataType, PrecisionType.Float, ref result, false, dataCollector.PortCategory ) )
+				{
+					uvName = result;
+				}
+				else if( dataCollector.TemplateDataCollectorInstance.HasUV( m_textureCoordChannel ) )
 				{
 					uvName = dataCollector.TemplateDataCollectorInstance.GetUVName( m_textureCoordChannel, m_outputPorts[ 0 ].DataType );
 				}
@@ -438,7 +453,7 @@ namespace AmplifyShaderEditor
 				}
 				if( !string.IsNullOrEmpty( currPropertyName ) )
 				{
-					string finalTexCoordName = "uv" + m_textureCoordChannel + currPropertyName;
+					string finalTexCoordName = "uv" + indexStr + ( m_texcoordSize > 2 ? "s" + sizeDif : "" ) + currPropertyName;
 					string dummyPropertyTexcoords = currPropertyName + "_ST";
 
 					if( m_texCoordsHelper == null )
@@ -476,7 +491,7 @@ namespace AmplifyShaderEditor
 				}
 				else
 				{
-					string finalTexCoordName = "uv" + m_textureCoordChannel + OutputId;
+					string finalTexCoordName = "texCoord" + OutputId;
 					tiling = m_tilingPort.GeneratePortInstructions( ref dataCollector );
 					offset = m_offsetPort.GeneratePortInstructions( ref dataCollector );
 

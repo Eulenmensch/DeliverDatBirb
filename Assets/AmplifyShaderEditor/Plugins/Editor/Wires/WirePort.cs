@@ -23,7 +23,9 @@ namespace AmplifyShaderEditor
 		SAMPLER2D = 1 << 11,
 		SAMPLER3D = 1 << 12,
 		SAMPLERCUBE = 1 << 13,
-		UINT = 1 << 14
+		UINT = 1 << 14,
+		SAMPLER2DARRAY = 1 << 15,
+		SAMPLERSTATE = 1 << 16
 	}
 
 	public enum VariableQualifiers

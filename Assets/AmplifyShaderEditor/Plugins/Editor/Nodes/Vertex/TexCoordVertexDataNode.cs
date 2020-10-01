@@ -104,10 +104,8 @@ namespace AmplifyShaderEditor
 				}
 
 				string result = string.Empty;
-				if( dataCollector.TemplateDataCollectorInstance.GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ m_index ], WirePortDataType.FLOAT4, PrecisionType.Float, ref result, false, dataCollector.PortCategory ) )
+				if( dataCollector.TemplateDataCollectorInstance.GetCustomInterpolatedData( TemplateHelperFunctions.IntToUVChannelInfo[ m_index ], m_outputPorts[ 0 ].DataType, PrecisionType.Float, ref result, false, dataCollector.PortCategory ) )
 				{
-					if( m_outputPorts[ 0 ].DataType != WirePortDataType.FLOAT4 )
-						result += UIUtils.GetAutoSwizzle( m_outputPorts[ 0 ].DataType );
 					return GetOutputVectorItem( 0, outputId, result );
 				}
 				else

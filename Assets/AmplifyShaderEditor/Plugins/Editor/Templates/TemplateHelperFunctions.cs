@@ -2,6 +2,7 @@
 // Copyright (c) Amplify Creations, Lda <info@amplify.pt>
 
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEditor;
@@ -522,7 +523,8 @@ namespace AmplifyShaderEditor
 			{"Vector",WirePortDataType.FLOAT4},
 			{"2D",WirePortDataType.SAMPLER2D},
 			{"3D",WirePortDataType.SAMPLER3D},
-			{"Cube",WirePortDataType.SAMPLERCUBE}
+			{"Cube",WirePortDataType.SAMPLERCUBE},
+			{"2DArray",WirePortDataType.SAMPLER2DARRAY},
 		};
 
 		public static readonly Dictionary<WirePortDataType, int> DataTypeChannelUsage = new Dictionary<WirePortDataType, int>
@@ -540,7 +542,9 @@ namespace AmplifyShaderEditor
 			{WirePortDataType.SAMPLER1D,0 },
 			{WirePortDataType.SAMPLER2D,0 },
 			{WirePortDataType.SAMPLER3D,0 },
-			{WirePortDataType.SAMPLERCUBE,0 }
+			{WirePortDataType.SAMPLERCUBE,0 },
+			{WirePortDataType.SAMPLER2DARRAY,0 },
+			{WirePortDataType.SAMPLERSTATE,0 }
 		};
 
 		public static readonly Dictionary<int, WirePortDataType> ChannelToDataType = new Dictionary<int, WirePortDataType>
@@ -817,12 +821,14 @@ namespace AmplifyShaderEditor
 			{"fixed3x3"         ,WirePortDataType.FLOAT3x3},
 			{"fixed4x4"         ,WirePortDataType.FLOAT4x4},
 			{"int"              ,WirePortDataType.INT},
-			{"uint"              ,WirePortDataType.INT},
+			{"uint"             ,WirePortDataType.INT},
 			{"sampler1D"        ,WirePortDataType.SAMPLER1D},
 			{"sampler2D"        ,WirePortDataType.SAMPLER2D},
 			{"sampler2D_float"  ,WirePortDataType.SAMPLER2D},
 			{"sampler3D"        ,WirePortDataType.SAMPLER3D},
-			{"samplerCUBE"      ,WirePortDataType.SAMPLERCUBE}
+			{"samplerCUBE"      ,WirePortDataType.SAMPLERCUBE},
+			{"sampler2DArray"   ,WirePortDataType.SAMPLER2DARRAY},
+			{"SamplerState"     ,WirePortDataType.SAMPLERSTATE}
 		};
 
 		public static readonly Dictionary<string, int> AvailableInterpolators = new Dictionary<string, int>()
@@ -911,7 +917,7 @@ namespace AmplifyShaderEditor
 		public static readonly string ZWritePattern = @"^\s*ZWrite\s+(\[*\w+\]*)";
 		//public static readonly string ZOffsetPattern = @"\s*Offset\s+([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)";
 		public static readonly string ZOffsetPattern = @"^\s*Offset\s+([-+]?[0-9]*\.?[0-9]+|\[*\w+\]*)\s*,\s*([-+]?[0-9]*\.?[0-9]+|\[*\w+\]*)\s*";
-		public static readonly string VertexDataPattern = @"([a-z0-9D_]+|samplerCUBE)\s+(\w+)\s*:\s*([A-Z0-9_]+);";
+		public static readonly string VertexDataPattern = @"([a-z0-9D_]+|samplerCUBE|sampler2DArray)\s+(\w+)\s*:\s*([A-Z0-9_]+);";
 		public static readonly string InterpRangePattern = @"ase_interp\((\d\.{0,1}\w{0,4}),(\d*)\)";
 		//public static readonly string PropertiesPatternB = "(\\w*)\\s*\\(\\s*\"([\\w ]*)\"\\s*\\,\\s*(\\w*)\\s*.*\\)";
 		//public static readonly string PropertiesPatternC = "^\\s*(\\w*)\\s*\\(\\s*\"([\\w\\(\\)\\+\\-\\\\* ]*)\"\\s*\\,\\s*(\\w*)\\s*.*\\)";
@@ -2202,11 +2208,9 @@ namespace AmplifyShaderEditor
 
 		public static bool CheckIfTemplate( string assetPath )
 		{
-			Type type = AssetDatabase.GetMainAssetTypeAtPath( assetPath );
-			if( type == typeof( Shader ) )
+			if( assetPath.EndsWith( ".shader" ) )
 			{
-				Shader shader = AssetDatabase.LoadAssetAtPath<Shader>( assetPath );
-				if( shader != null )
+				if( File.Exists( assetPath ) )
 				{
 					string body = IOUtils.LoadTextFileFromDisk( assetPath );
 					return ( body.IndexOf( TemplatesManager.TemplateShaderNameBeginTag ) > -1 );
@@ -2227,57 +2231,75 @@ namespace AmplifyShaderEditor
 				case WirePortDataType.FLOAT4:
 				case WirePortDataType.COLOR:
 				case WirePortDataType.INT:
+				{
+					switch( second )
 					{
-						switch( second )
-						{
-							case WirePortDataType.FLOAT3x3:
-							case WirePortDataType.FLOAT4x4:
-							case WirePortDataType.SAMPLER1D:
-							case WirePortDataType.SAMPLER2D:
-							case WirePortDataType.SAMPLER3D:
-							case WirePortDataType.SAMPLERCUBE:
-							return false;
-						}
+						case WirePortDataType.FLOAT3x3:
+						case WirePortDataType.FLOAT4x4:
+						case WirePortDataType.SAMPLER1D:
+						case WirePortDataType.SAMPLER2D:
+						case WirePortDataType.SAMPLER3D:
+						case WirePortDataType.SAMPLERCUBE:
+						case WirePortDataType.SAMPLER2DARRAY:
+						case WirePortDataType.SAMPLERSTATE:
+						return false;
 					}
-					break;
+				}
+				break;
 				case WirePortDataType.FLOAT3x3:
 				case WirePortDataType.FLOAT4x4:
+				{
+					switch( second )
 					{
-						switch( second )
-						{
-							case WirePortDataType.FLOAT:
-							case WirePortDataType.FLOAT2:
-							case WirePortDataType.FLOAT3:
-							case WirePortDataType.FLOAT4:
-							case WirePortDataType.COLOR:
-							case WirePortDataType.INT:
-							case WirePortDataType.SAMPLER1D:
-							case WirePortDataType.SAMPLER2D:
-							case WirePortDataType.SAMPLER3D:
-							case WirePortDataType.SAMPLERCUBE:
-							return false;
-						}
+						case WirePortDataType.FLOAT:
+						case WirePortDataType.FLOAT2:
+						case WirePortDataType.FLOAT3:
+						case WirePortDataType.FLOAT4:
+						case WirePortDataType.COLOR:
+						case WirePortDataType.INT:
+						case WirePortDataType.SAMPLER1D:
+						case WirePortDataType.SAMPLER2D:
+						case WirePortDataType.SAMPLER3D:
+						case WirePortDataType.SAMPLERCUBE:
+						case WirePortDataType.SAMPLER2DARRAY:
+						case WirePortDataType.SAMPLERSTATE:
+						return false;
 					}
-					break;
+				}
+				break;
 				case WirePortDataType.SAMPLER1D:
 				case WirePortDataType.SAMPLER2D:
 				case WirePortDataType.SAMPLER3D:
 				case WirePortDataType.SAMPLERCUBE:
+				case WirePortDataType.SAMPLER2DARRAY:
+				{
+					switch( second )
 					{
-						switch( second )
-						{
-							case WirePortDataType.FLOAT:
-							case WirePortDataType.FLOAT2:
-							case WirePortDataType.FLOAT3:
-							case WirePortDataType.FLOAT4:
-							case WirePortDataType.FLOAT3x3:
-							case WirePortDataType.FLOAT4x4:
-							case WirePortDataType.COLOR:
-							case WirePortDataType.INT:
-							return false;
-						}
+						case WirePortDataType.FLOAT:
+						case WirePortDataType.FLOAT2:
+						case WirePortDataType.FLOAT3:
+						case WirePortDataType.FLOAT4:
+						case WirePortDataType.FLOAT3x3:
+						case WirePortDataType.FLOAT4x4:
+						case WirePortDataType.COLOR:
+						case WirePortDataType.INT:
+						case WirePortDataType.SAMPLERSTATE:
+						return false;
 					}
-					break;
+				}
+				break;
+				case WirePortDataType.SAMPLERSTATE:
+				{
+					switch( second )
+					{
+						default:
+						return false;
+						case WirePortDataType.SAMPLERSTATE:
+						case WirePortDataType.OBJECT:
+						break;
+					}
+				}
+				break;
 			}
 			return true;
 		}
@@ -2314,28 +2336,6 @@ namespace AmplifyShaderEditor
 				value = string.Format( "Unity_SafeNormalize( {0} )", value );
 			}
 			return value;
-		}
-
-
-		public static string CreateUnpackNormalStr( MasterNodeDataCollector dataCollector, bool applyScale, string scale )
-		{
-			string funcName;
-			if( dataCollector.IsTemplate && dataCollector.IsSRP )
-			{
-				if( dataCollector.TemplateDataCollectorInstance.IsHDRP )
-				{
-					funcName = "UnpackNormalmapRGorAG( {0}, " + scale + " )";
-				}
-				else
-				{
-					funcName = "UnpackNormalScale( {0}, " + scale + " )";
-				}
-			}
-			else
-			{
-				funcName = applyScale ? "UnpackScaleNormal( {0}, " + scale + " )" : "UnpackNormal( {0} )";
-			}
-			return funcName;
 		}
 
 		public static bool IsInlineProperty( string data, ref string property )
