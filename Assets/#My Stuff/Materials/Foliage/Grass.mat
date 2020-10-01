@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Grass
+  m_Shader: {fileID: 4800000, guid: 6b6d63a3b8f87cc4996218c3eb71efb7, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Main_Tex:
+        m_Texture: {fileID: 2800000, guid: 88ebb31436e36c445b9cc48c6a1d64ff, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _AlphaCutoff: 0.95
+    - _Cutoff: 0.5
+    - _TransAmbient: 0.304
+    - _TransDirect: 0.9
+    - _TransNormal: 0.281
+    - _TransScattering: 15.4
+    - _TransShadow: 0.445
+    - _TransStrength: 19.9
+    - _TransmissionShadow: 0.5
+    - _WindDensity: 3.8
+    - _WindSpeed: 0.33
+    - _WindStrength: 0.85
+    - __dirty: 0
+    - _fadedistance: 1
+    - _fadelength: 1
+    - _fadeoffset: 0
+    m_Colors:
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MainColor: {r: 0.4500165, g: 0.462264, b: 0.1788002, a: 0}
