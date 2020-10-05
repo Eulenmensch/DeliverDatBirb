@@ -144,10 +144,12 @@ public class PlayerController : MonoBehaviour
         }
         else if (!IsGrounded() && currentVelocityY < 0) // make the descent faster than the ascend
         {
+            print("boop");
             VelocityGravitational.y -= GravitationalAcceleration * FallModifier * Time.deltaTime;
         }
         else // if nothing else, apply normal gravity
         {
+            print("regular beep");
             VelocityGravitational.y -= GravitationalAcceleration * Time.deltaTime;
         }
         MoveDirection.y += VelocityGravitational.y;

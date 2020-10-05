@@ -2,6 +2,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using DG.Tweening;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 public class Player : MonoBehaviour
 {
     [SerializeField] GameObject cameraRef;
@@ -17,7 +21,7 @@ public class Player : MonoBehaviour
     [SerializeField] float glideModifier;
 
     #region properties for the serializeFields
-    public GameObject Camera { get { return cameraRef; } set { cameraRef = value; } }
+    public GameObject CameraRef { get { return cameraRef; } set { cameraRef = value; } }
     public Animator PlayerAnimator { get { return playerAnimator; } set { playerAnimator = value; } }
 
     public float Speed { get { return speed; } set { speed = value; } }
@@ -30,15 +34,15 @@ public class Player : MonoBehaviour
     public float GlideModifier { get { return glideModifier; } set { glideModifier = value; } }
     #endregion
 
-    public Vector2 MovementInput { get; private set; }
-    public bool IsReceivingJumpInput { get; private set; }
-    public bool HasStoppedReceivingJumpInput { get; private set; }
-    public bool IsReceivingFlapInput { get; private set; }
+    public Vector2 MovementInput { get; private set; } = Vector2.zero;
+    public bool IsReceivingJumpInput { get; private set; } = false;
+    public bool HasStoppedReceivingJumpInput { get; set; } = true;
+    public bool IsReceivingFlapInput { get; private set; } = false;
 
-    public Vector3 MoveVector { get; set; }
-    public Vector3 VelocityGravitational { get; set; }
-    public bool Grounded { get; private set; }
-    public bool InDialogue { get; private set; }
+    public Vector3 MoveVector { get; set; } = Vector3.zero;
+    public Vector3 VelocityGravitational { get; set; } = Vector3.zero;
+    public bool Grounded { get; private set; } = false;
+    public bool InDialogue { get; private set; } = false;
 
     public StateMachine PlayerStateMachine { get; private set; }
     public CharacterController CharacterControllerRef { get; private set; }
@@ -52,13 +56,19 @@ public class Player : MonoBehaviour
         CharacterControllerRef = GetComponent<CharacterController>();
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        PlayerStateMachine.UpdateState();
         Grounded = IsGrounded();
+        PlayerStateMachine.UpdateState();
 
+        ApplyGravity();
         Move();
         SetRotationToMoveDirection();
+    }
+
+    void Move()
+    {
+        CharacterControllerRef.Move(MoveVector * Time.deltaTime);
     }
 
     void SetRotationToMoveDirection()
@@ -70,9 +80,20 @@ public class Player : MonoBehaviour
         }
     }
 
-    void Move()
+    void ApplyGravity()
     {
-        CharacterControllerRef.Move(MoveVector * Time.deltaTime);
+        if (Grounded && VelocityGravitational.y < 0.0f) // reset gravitational velocity to 0-ish if grounded
+        {
+            VelocityGravitational = Vector3.down * 10f;
+        }
+
+        MoveVector += VelocityGravitational;
+        // print(VelocityGravitational.y);
+    }
+
+    public void SetDefaultGravity()
+    {
+        VelocityGravitational -= new Vector3(0, GravitationalAcceleration * Time.deltaTime, 0);
     }
 
     bool IsGrounded()
@@ -82,7 +103,7 @@ public class Player : MonoBehaviour
 
     public void GetMoveInput(InputAction.CallbackContext context)
     {
-        float cameraAngle = (Camera.transform.rotation.eulerAngles.y) * Mathf.Deg2Rad;
+        float cameraAngle = (CameraRef.transform.rotation.eulerAngles.y) * Mathf.Deg2Rad;
         Vector2 inputVector = context.ReadValue<Vector2>();
         Vector2 rotatedInputVector = new Vector2(
             inputVector.x * Mathf.Cos(-cameraAngle) - inputVector.y * Mathf.Sin(-cameraAngle),
@@ -96,11 +117,36 @@ public class Player : MonoBehaviour
         if (context.started)
         {
             IsReceivingJumpInput = true;
+            if (!Grounded)
+            {
+                IsReceivingFlapInput = true;
+            }
         }
         else if (context.canceled)
         {
             IsReceivingJumpInput = false;
+            IsReceivingFlapInput = false;
             HasStoppedReceivingJumpInput = true;
         }
     }
+
+    public void GetInteractionInput(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            Events.Instance.Interact();
+        }
+    }
+
+
+#if UNITY_EDITOR
+    [SerializeField] GUIStyle DebugTextStyle;
+    private void OnGUI()
+    {
+        var position = Camera.main.WorldToScreenPoint(gameObject.transform.position);
+        var textSize = GUI.skin.label.CalcSize(new GUIContent(PlayerStateMachine.CurrentState.ToString()));
+        GUI.Label(new Rect(position.x, Screen.height - position.y, textSize.x, textSize.y), PlayerStateMachine.CurrentState.ToString(), DebugTextStyle);
+        GUI.Label(new Rect(position.x, Screen.height - position.y + (textSize.y * 2), textSize.x, textSize.y), VelocityGravitational.y.ToString(), DebugTextStyle);
+    }
+#endif
 }

@@ -1,4 +1,5 @@
-﻿public class StateMachine
+﻿using UnityEngine;
+public class StateMachine
 {
     public IState CurrentState { get; private set; }
 
@@ -10,6 +11,7 @@
         }
         CurrentState = _newState;
         CurrentState.Enter();
+        // Debug.Log(CurrentState.ToString());
     }
 
     public void UpdateState()

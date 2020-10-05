@@ -12,14 +12,15 @@ public class PlayerWalkingState : IState
     public void Enter() { }
     public void Execute()
     {
-        ApplyMoveInput();
-        ApplyGravity();
+        SetMoveVector();
+        SetGravity();
+        SetAnimatorSpeedFloat();
         CheckStateChanges();
     }
 
     public void Exit() { }
 
-    void ApplyMoveInput()
+    void SetMoveVector()
     {
         Vector3 inputVector = new Vector3(Owner.MovementInput.x, 0.0f, Owner.MovementInput.y);
 
@@ -28,11 +29,16 @@ public class PlayerWalkingState : IState
         Owner.MoveVector *= Owner.Speed;
     }
 
-    void ApplyGravity()
+    void SetGravity()
     {
-        Owner.VelocityGravitational = new Vector3(0, Owner.VelocityGravitational.y - Owner.GravitationalAcceleration * Time.deltaTime, 0);
+        Owner.SetDefaultGravity();
+    }
 
-        Owner.MoveVector = new Vector3(Owner.MoveVector.x, Owner.MoveVector.y + Owner.VelocityGravitational.y, Owner.MoveVector.z);
+    private void SetAnimatorSpeedFloat()
+    {
+        Vector3 horizontalVelocity = new Vector3(Owner.CharacterControllerRef.velocity.x, 0, Owner.CharacterControllerRef.velocity.z);
+        float speed = horizontalVelocity.magnitude / Owner.Speed;
+        Owner.PlayerAnimator.SetFloat("Speed", speed);
     }
 
     private void CheckStateChanges()
@@ -41,7 +47,7 @@ public class PlayerWalkingState : IState
         {
             Owner.PlayerStateMachine.ChangeState(new PlayerIdleState(Owner));
         }
-        if (Owner.IsReceivingJumpInput)
+        if (Owner.IsReceivingJumpInput && Owner.HasStoppedReceivingJumpInput)
         {
             Owner.PlayerStateMachine.ChangeState(new PlayerJumpingState(Owner));
         }
