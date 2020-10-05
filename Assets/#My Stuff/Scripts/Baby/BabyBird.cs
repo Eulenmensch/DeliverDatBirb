@@ -20,8 +20,8 @@ public class BabyBird : MonoBehaviour
 
     private void Start()
     {
-        // Player = FindObjectOfType<Player>().gameObject; //FIXME: Use this once the player script is useable and delete the next line
-        Player = FindObjectOfType<PlayerController>().gameObject;
+        Player = FindObjectOfType<Player>().gameObject;
+        // Player = FindObjectOfType<PlayerController>().gameObject;
         BabyStateMachine = new StateMachine();
         BabyStateMachine.ChangeState(new BabyYardPatrollingState(this));
     }
