@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Objects
+  m_Name: PaperClip 2
   m_Shader: {fileID: -6465566751694194690, guid: 99a5993f6e249a44f9c2dab00a475ead,
     type: 3}
   m_ShaderKeywords: 
@@ -25,11 +25,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - Vector1_2DDD97F1: 0.56
-    - Vector1_5E994092: 3.32
+    - Vector1_2DDD97F1: 0.44
+    - Vector1_5E994092: 1.12
     - Vector1_6FFE4F95: 20
-    - Vector1_8ABDF5C9: -9.6
-    - Vector1_FCC3FE01: 0.02
+    - Vector1_8ABDF5C9: -2.4
+    - Vector1_FCC3FE01: 0.79
     m_Colors:
-    - Color_95FFB436: {r: 0, g: 0, b: 0, a: 0}
+    - Color_95FFB436: {r: 1024, g: 1024, b: 1024, a: 1}
     - Color_D51F676B: {r: 1.319508, g: 1.319508, b: 1.319508, a: 0}

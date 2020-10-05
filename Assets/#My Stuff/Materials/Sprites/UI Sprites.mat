@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Grass
-  m_Shader: {fileID: 4800000, guid: 6b6d63a3b8f87cc4996218c3eb71efb7, type: 3}
+  m_Name: UI Sprites
+  m_Shader: {fileID: 4800000, guid: 36d4eb26daf31ea4f8c89ce2f6c45049, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -19,8 +19,12 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _Main_Tex:
-        m_Texture: {fileID: 2800000, guid: 60004e02894b81c499f27d0ee89906fe, type: 3}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TextureSample0:
+        m_Texture: {fileID: 2800000, guid: 22a28b6af2618124692310e13d889055, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _texcoord:
@@ -28,23 +32,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _AlphaCutoff: 0.95
-    - _ColorNoiseScale: 3.11
-    - _Cutoff: 0.5
-    - _TransAmbient: 0.304
-    - _TransDirect: 0.9
-    - _TransNormal: 0.281
-    - _TransScattering: 15.4
-    - _TransShadow: 0.445
-    - _TransStrength: 19.9
-    - _TransmissionShadow: 0.5
-    - _WindDensity: 3.8
-    - _WindSpeed: 0.33
-    - _WindStrength: 0.85
-    - __dirty: 0
-    - _fadedistance: 1
-    - _fadelength: 1
-    - _fadeoffset: 0
+    - _AlphaCutoff: 0.5
+    - _ColorMask: 15
+    - _Emissive: 1.53
+    - _Stencil: 0
+    - _StencilComp: 8
+    - _StencilOp: 0
+    - _StencilReadMask: 255
+    - _StencilWriteMask: 255
+    - _UseUIAlphaClip: 0
     m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
-    - _MainColor: {r: 0.4500165, g: 0.462264, b: 0.1788002, a: 0}

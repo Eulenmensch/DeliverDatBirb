@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Objects
-  m_Shader: {fileID: -6465566751694194690, guid: 99a5993f6e249a44f9c2dab00a475ead,
+  m_Name: PaperClip 1
+  m_Shader: {fileID: -6465566751694194690, guid: 60256447b66ae8c45a9e2ca5b631e8c5,
     type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
@@ -20,16 +20,20 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - Texture2D_691A378B:
+        m_Texture: {fileID: 2800000, guid: e2083eef93ae2de46a4db06aeeb87eab, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - Texture2D_D397CEFF:
-        m_Texture: {fileID: 2800000, guid: 311c46ade7a82ab43adbfccd823d155d, type: 3}
+        m_Texture: {fileID: 2800000, guid: e2083eef93ae2de46a4db06aeeb87eab, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - Vector1_2DDD97F1: 0.56
-    - Vector1_5E994092: 3.32
-    - Vector1_6FFE4F95: 20
-    - Vector1_8ABDF5C9: -9.6
-    - Vector1_FCC3FE01: 0.02
+    - Vector1_2DDD97F1: 0.45
+    - Vector1_5E994092: 0
+    - Vector1_6FFE4F95: 52
+    - Vector1_8ABDF5C9: -18.7
+    - Vector1_FCC3FE01: 0.88
     m_Colors:
-    - Color_95FFB436: {r: 0, g: 0, b: 0, a: 0}
+    - Color_95FFB436: {r: 2, g: 2, b: 2, a: 1}
     - Color_D51F676B: {r: 1.319508, g: 1.319508, b: 1.319508, a: 0}
