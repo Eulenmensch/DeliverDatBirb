@@ -1,8 +1,23 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Joosh/Quest")]
+[CreateAssetMenu(menuName = "Joosh/Quest"), System.Serializable]
 public class Quest : ScriptableObject
 {
-    bool Completed = false;
-    [SerializeField] ObjectiveTrigger[] Objectives;
+    [SerializeField] Objective[] objectives = null;
+    public Objective[] Objectives
+    {
+        get => objectives;
+        set => objectives = value;
+    }
+
+    public bool Completed { get; private set; }
+
+    public void CheckCompleted()
+    {
+        foreach (var objective in Objectives)
+        {
+            if (objective.Completed) { return; }
+        }
+        Completed = true;
+    }
 }

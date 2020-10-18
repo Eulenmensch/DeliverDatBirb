@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-[RequireComponent( typeof( NavMeshAgent ) )]
+[RequireComponent(typeof(NavMeshAgent))]
 public class BirdPatrolBehaviour : MonoBehaviour
 {
-    [SerializeField] private Transform[] PatrolPoints;
-    [SerializeField] private GameObject Player;
-    [SerializeField] private float FlockSpeed;
+    [SerializeField] private Transform[] PatrolPoints = null;
+    [SerializeField] private GameObject Player = null;
+    [SerializeField] private float FlockSpeed = 0;
 
     private float DefaultSpeed;
     private NavMeshAgent BirdAgent;
@@ -29,13 +29,13 @@ public class BirdPatrolBehaviour : MonoBehaviour
     {
         PlayerPosition = Player.transform.position;
         NavMeshHit hit;
-        if ( NavMesh.SamplePosition( PlayerPosition, out hit, 1f, NavMesh.AllAreas ) )
+        if (NavMesh.SamplePosition(PlayerPosition, out hit, 1f, NavMesh.AllAreas))
         {
             BirdAgent.speed = FlockSpeed;
             BirdAgent.destination = PlayerPosition;
         }
 
-        else if ( !BirdAgent.pathPending && BirdAgent.remainingDistance < BirdAgent.stoppingDistance + 0.5f )
+        else if (!BirdAgent.pathPending && BirdAgent.remainingDistance < BirdAgent.stoppingDistance + 0.5f)
         {
             BirdAgent.speed = DefaultSpeed;
             GoToNextPoint();
@@ -44,8 +44,8 @@ public class BirdPatrolBehaviour : MonoBehaviour
 
     private void GoToNextPoint()
     {
-        if ( PatrolPoints.Length == 0 ) { return; }
+        if (PatrolPoints.Length == 0) { return; }
 
-        BirdAgent.destination = PatrolPoints[Random.Range( 0, PatrolPoints.Length - 1 )].position;
+        BirdAgent.destination = PatrolPoints[Random.Range(0, PatrolPoints.Length - 1)].position;
     }
 }

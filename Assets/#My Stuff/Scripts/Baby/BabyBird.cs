@@ -3,6 +3,14 @@ using UnityEngine.AI;
 
 public class BabyBird : MonoBehaviour
 {
+    [Header("Quest")]
+    [SerializeField] Quest quest;
+    public Quest Quest
+    {
+        get => quest;
+        set => quest = value;
+    }
+
     [Header("General")]
     public ParticleSystem ExcitedParticles;
 

@@ -46,6 +46,12 @@ public class Player : MonoBehaviour
 
     public StateMachine PlayerStateMachine { get; private set; }
     public CharacterController CharacterControllerRef { get; private set; }
+    [SerializeField] Quest activeQuest; //FIXME: this is a temporary field while the quests aren't being assigned in code
+    public Quest ActiveQuest
+    {
+        get => activeQuest;
+        set => activeQuest = value;
+    }
 
 
     private void Start()
@@ -140,7 +146,7 @@ public class Player : MonoBehaviour
 
 
 #if UNITY_EDITOR
-    [SerializeField] GUIStyle DebugTextStyle;
+    [SerializeField] GUIStyle DebugTextStyle = null;
     private void OnGUI()
     {
         var position = Camera.main.WorldToScreenPoint(gameObject.transform.position);

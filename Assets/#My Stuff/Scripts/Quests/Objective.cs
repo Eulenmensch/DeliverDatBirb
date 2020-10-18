@@ -1,11 +1,25 @@
 using UnityEngine;
 
-public class Objective : MonoBehaviour
+[CreateAssetMenu(menuName = "Joosh/Objective")]
+public class Objective : ScriptableObject
 {
-    [SerializeField] ObjectiveTrigger trigger;
-    public ObjectiveTrigger Trigger
+    public bool Completed { get; private set; } = false;
+    public string[] BabyObjectiveTexts
     {
-        get { return trigger; }
-        set { trigger = value; }
+        get { return babyObjectiveTexts; }
+        private set { babyObjectiveTexts = value; }
+    }
+    [SerializeField, TextArea] string[] babyObjectiveTexts;
+
+    public string[] ObjectiveCompletionTexts
+    {
+        get { return objectiveCompletionTexts; }
+        private set { objectiveCompletionTexts = value; }
+    }
+    [SerializeField, TextArea] string[] objectiveCompletionTexts;
+
+    public void SetCompleted()
+    {
+        Completed = true;
     }
 }

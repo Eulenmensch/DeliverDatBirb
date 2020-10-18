@@ -1,25 +1,39 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Joosh/ObjectiveTrigger")]
-public class ObjectiveTrigger : ScriptableObject
+public class ObjectiveTrigger : MonoBehaviour
 {
-    public bool Completed { get; set; } = false;
-    public string[] BabyObjectiveTexts
+    [SerializeField] Objective objective;
+    public Objective Objective
     {
-        get { return babyObjectiveTexts; }
-        private set { babyObjectiveTexts = value; }
+        get => objective;
+        set => objective = value;
     }
-    [SerializeField, TextArea] string[] babyObjectiveTexts;
 
-    public string[] ObjectiveCompletionText
+    private bool Active;
+
+    private void OnEnable()
     {
-        get { return objectiveCompletionText; }
-        private set { objectiveCompletionText = value; }
+        Events.Instance.OnInteract += SetActive;
     }
-    [SerializeField, TextArea] string[] objectiveCompletionText;
-
-    public void SetCompleted()
+    private void OnDisable()
     {
-        Completed = true;
+        Events.Instance.OnInteract -= SetActive;
+    }
+
+    protected virtual void Interact()
+    {
+
+    }
+
+    private void SetActive()
+    {
+        if (QuestManager.Instance.ActiveObjective == Objective)
+        {
+            Active = true;
+        }
+        else
+        {
+            Active = false;
+        }
     }
 }

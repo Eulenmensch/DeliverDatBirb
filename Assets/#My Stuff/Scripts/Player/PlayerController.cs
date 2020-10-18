@@ -8,8 +8,8 @@ public class PlayerController : MonoBehaviour
 {
     private CharacterController CharacterControllerRef;
 
-    public GameObject Camera;
-    [SerializeField] Animator PlayerAnimator;
+    public GameObject Camera = null;
+    [SerializeField] Animator PlayerAnimator = null;
     // public Transform GroundCheckSphere;
     // public float GroundCheckRadius;
     // public LayerMask GroundLayerMask;
