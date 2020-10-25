@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using DG.Tweening;
+using Cinemachine;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -9,6 +10,8 @@ using UnityEditor;
 public class Player : MonoBehaviour
 {
     [SerializeField] GameObject cameraRef;
+    [SerializeField] CinemachineVirtualCamera dialogueCam;
+    [SerializeField] Canvas dialogueCanvas;
     [SerializeField] Animator playerAnimator;
 
     [SerializeField] float speed;
@@ -22,6 +25,8 @@ public class Player : MonoBehaviour
 
     #region properties for the serializeFields
     public GameObject CameraRef { get { return cameraRef; } set { cameraRef = value; } }
+    public CinemachineVirtualCamera DialogueCam { get => dialogueCam; private set => dialogueCam = value; }
+    public Canvas DialogueCanvas { get => dialogueCanvas; private set => dialogueCanvas = value; }
     public Animator PlayerAnimator { get { return playerAnimator; } set { playerAnimator = value; } }
 
     public float Speed { get { return speed; } set { speed = value; } }
@@ -42,7 +47,7 @@ public class Player : MonoBehaviour
     public Vector3 MoveVector { get; set; } = Vector3.zero;
     public Vector3 VelocityGravitational { get; set; } = Vector3.zero;
     public bool Grounded { get; private set; } = false;
-    public bool InDialogue { get; private set; } = false;
+    public bool InDialogue { get; set; } = false;
 
     public StateMachine PlayerStateMachine { get; private set; }
     public CharacterController CharacterControllerRef { get; private set; }
@@ -52,7 +57,7 @@ public class Player : MonoBehaviour
         get => activeQuest;
         set => activeQuest = value;
     }
-
+    public Transform BabyLookAt { get; set; }
 
     private void Start()
     {
@@ -74,15 +79,21 @@ public class Player : MonoBehaviour
 
     void Move()
     {
-        CharacterControllerRef.Move(MoveVector * Time.deltaTime);
+        if (!InDialogue)
+        {
+            CharacterControllerRef.Move(MoveVector * Time.deltaTime);
+        }
     }
 
     void SetRotationToMoveDirection()
     {
-        Vector3 lookDirection = new Vector3(MovementInput.x, 0.0f, MovementInput.y);
-        if (lookDirection.magnitude >= 0.1)
+        if (!InDialogue)
         {
-            transform.DORotateQuaternion(Quaternion.LookRotation(lookDirection, Vector3.up), 0.4f).SetEase(Ease.OutCirc);
+            Vector3 lookDirection = new Vector3(MovementInput.x, 0.0f, MovementInput.y);
+            if (lookDirection.magnitude >= 0.1)
+            {
+                transform.DORotateQuaternion(Quaternion.LookRotation(lookDirection, Vector3.up), 0.4f).SetEase(Ease.OutCirc);
+            }
         }
     }
 

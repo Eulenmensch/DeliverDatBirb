@@ -9,7 +9,7 @@ public class ObjectiveTrigger : MonoBehaviour
         set => objective = value;
     }
 
-    private bool Active;
+    public bool Active { get; private set; }
 
     private void OnEnable()
     {
