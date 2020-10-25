@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.AI;
+using UnityEngine.UI;
 
 public class BabyBird : MonoBehaviour
 {
@@ -10,6 +10,12 @@ public class BabyBird : MonoBehaviour
         get => quest;
         set => quest = value;
     }
+
+    [Header("Dialogue")]
+    [SerializeField] YarnProgram dialogue;
+    public YarnProgram Dialogue { get => dialogue; private set => dialogue = value; }
+    [SerializeField] string startNode;
+    public string StartNode { get => startNode; private set => startNode = value; }
 
     [Header("General")]
     public ParticleSystem ExcitedParticles;
