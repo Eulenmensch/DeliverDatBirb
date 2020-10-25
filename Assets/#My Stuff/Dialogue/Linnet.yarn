@@ -1,0 +1,42 @@
+title: LinnetStart
+tags: 
+colorID: 1
+position: 941,351
+---
+Jeereeeeemy! You're laaaate!
+<< wait 1>> 
+Did you know that bumblebees pollinate flowers? 
+<< wait 1>> 
+Bumblebees are so cute!
+<< wait 1>> 
+I'm super thirsty, can you get me something Jerm Jerm?
+<< wait 1>> 
+That's a name that I came up with for you, do you like it? Jerm Jerm!
+[[Sure, kid! I like nicknames |NicknameYes]]
+[[ Not so much, if I'm being honest... |NicknameNo]]
+===
+title: NicknameYes
+tags: 
+colorID: 0
+position: 653,685
+---
+What's a nickname, Jerm Jerm?
+<< wait 1>> 
+-> It's when you call someone by a made up name.
+    Oh, ok then that's your nickname from now!
+-> Nicknames are names that you use for friends.
+    Jerm Jerm friend!
+<< wait 2>>
+===
+title: NicknameNo
+tags: 
+colorID: 0
+position: 1183,668
+---
+Oh, ok... 
+<< wait 2>> 
+Then I'll call you...
+<< wait 2>> 
+Jurrmurr!
+<< wait 2>>
+===
